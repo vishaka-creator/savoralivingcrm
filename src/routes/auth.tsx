@@ -114,7 +114,9 @@ function AuthPage() {
     if (error) {
       setBusy(false);
       toast.error(error.message);
+      return;
     }
+    router.navigate({ to: "/dashboard", replace: true });
   }
 
   if (sentTo) {
