@@ -123,7 +123,7 @@ function useCollection(slug: string) {
 }
 
 function SetRecipes() {
-  const [slug, setSlug] = useState(COLLECTIONS[0].slug);
+  const [slug, setSlug] = useState<string>(COLLECTIONS[0]!.slug);
   const { data, isPending } = useCollection(slug);
   const queryClient = useQueryClient();
   const upsert = useServerFn(upsertBomRow);
@@ -287,7 +287,7 @@ function SetRecipes() {
 }
 
 function Thresholds() {
-  const [slug, setSlug] = useState(COLLECTIONS[0].slug);
+  const [slug, setSlug] = useState<string>(COLLECTIONS[0]!.slug);
   const { data, isPending } = useCollection(slug);
   const queryClient = useQueryClient();
   const update = useServerFn(setLowStockThreshold);
