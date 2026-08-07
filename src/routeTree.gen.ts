@@ -10,33 +10,145 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
+import { Route as AuthRouteImport } from './routes/auth'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
+import { Route as AuthenticatedCrmRouteImport } from './routes/_authenticated/crm'
+import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as AuthenticatedSalesRouteImport } from './routes/_authenticated/sales'
+import { Route as AuthenticatedCollectionsSlugRouteImport } from './routes/_authenticated/collections.$slug'
+import { Route as ApiPublicSyncSheetsRouteImport } from './routes/api/public/sync-sheets'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
+  id: '/_authenticated',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedCrmRoute = AuthenticatedCrmRouteImport.update({
+  id: '/crm',
+  path: '/crm',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedSalesRoute = AuthenticatedSalesRouteImport.update({
+  id: '/sales',
+  path: '/sales',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedCollectionsSlugRoute =
+  AuthenticatedCollectionsSlugRouteImport.update({
+    id: '/collections/$slug',
+    path: '/collections/$slug',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const ApiPublicSyncSheetsRoute = ApiPublicSyncSheetsRouteImport.update({
+  id: '/api/public/sync-sheets',
+  path: '/api/public/sync-sheets',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
+  '/reset-password': typeof ResetPasswordRoute
+  '/admin': typeof AuthenticatedAdminRoute
+  '/crm': typeof AuthenticatedCrmRoute
+  '/dashboard': typeof AuthenticatedDashboardRoute
+  '/sales': typeof AuthenticatedSalesRoute
+  '/collections/$slug': typeof AuthenticatedCollectionsSlugRoute
+  '/api/public/sync-sheets': typeof ApiPublicSyncSheetsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
+  '/reset-password': typeof ResetPasswordRoute
+  '/admin': typeof AuthenticatedAdminRoute
+  '/crm': typeof AuthenticatedCrmRoute
+  '/dashboard': typeof AuthenticatedDashboardRoute
+  '/sales': typeof AuthenticatedSalesRoute
+  '/collections/$slug': typeof AuthenticatedCollectionsSlugRoute
+  '/api/public/sync-sheets': typeof ApiPublicSyncSheetsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
+  '/auth': typeof AuthRoute
+  '/reset-password': typeof ResetPasswordRoute
+  '/_authenticated/admin': typeof AuthenticatedAdminRoute
+  '/_authenticated/crm': typeof AuthenticatedCrmRoute
+  '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/sales': typeof AuthenticatedSalesRoute
+  '/_authenticated/collections/$slug': typeof AuthenticatedCollectionsSlugRoute
+  '/api/public/sync-sheets': typeof ApiPublicSyncSheetsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/auth'
+    | '/reset-password'
+    | '/admin'
+    | '/crm'
+    | '/dashboard'
+    | '/sales'
+    | '/collections/$slug'
+    | '/api/public/sync-sheets'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/auth'
+    | '/reset-password'
+    | '/admin'
+    | '/crm'
+    | '/dashboard'
+    | '/sales'
+    | '/collections/$slug'
+    | '/api/public/sync-sheets'
+  id:
+    | '__root__'
+    | '/'
+    | '/_authenticated'
+    | '/auth'
+    | '/reset-password'
+    | '/_authenticated/admin'
+    | '/_authenticated/crm'
+    | '/_authenticated/dashboard'
+    | '/_authenticated/sales'
+    | '/_authenticated/collections/$slug'
+    | '/api/public/sync-sheets'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
+  AuthRoute: typeof AuthRoute
+  ResetPasswordRoute: typeof ResetPasswordRoute
+  ApiPublicSyncSheetsRoute: typeof ApiPublicSyncSheetsRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,22 +160,98 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/admin': {
+      id: '/_authenticated/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AuthenticatedAdminRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/crm': {
+      id: '/_authenticated/crm'
+      path: '/crm'
+      fullPath: '/crm'
+      preLoaderRoute: typeof AuthenticatedCrmRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/dashboard': {
+      id: '/_authenticated/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof AuthenticatedDashboardRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/sales': {
+      id: '/_authenticated/sales'
+      path: '/sales'
+      fullPath: '/sales'
+      preLoaderRoute: typeof AuthenticatedSalesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/collections/$slug': {
+      id: '/_authenticated/collections/$slug'
+      path: '/collections/$slug'
+      fullPath: '/collections/$slug'
+      preLoaderRoute: typeof AuthenticatedCollectionsSlugRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/api/public/sync-sheets': {
+      id: '/api/public/sync-sheets'
+      path: '/api/public/sync-sheets'
+      fullPath: '/api/public/sync-sheets'
+      preLoaderRoute: typeof ApiPublicSyncSheetsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
+interface AuthenticatedRouteRouteChildren {
+  AuthenticatedAdminRoute: typeof AuthenticatedAdminRoute
+  AuthenticatedCrmRoute: typeof AuthenticatedCrmRoute
+  AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedSalesRoute: typeof AuthenticatedSalesRoute
+  AuthenticatedCollectionsSlugRoute: typeof AuthenticatedCollectionsSlugRoute
+}
+
+const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedAdminRoute: AuthenticatedAdminRoute,
+  AuthenticatedCrmRoute: AuthenticatedCrmRoute,
+  AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedSalesRoute: AuthenticatedSalesRoute,
+  AuthenticatedCollectionsSlugRoute: AuthenticatedCollectionsSlugRoute,
+}
+
+const AuthenticatedRouteRouteWithChildren =
+  AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
+  AuthRoute: AuthRoute,
+  ResetPasswordRoute: ResetPasswordRoute,
+  ApiPublicSyncSheetsRoute: ApiPublicSyncSheetsRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
