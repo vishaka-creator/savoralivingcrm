@@ -55,7 +55,7 @@ export async function runSheetSync(opts: {
           .filter((p) => p.name && byName.has(p.name.slice(0, 200)))
           .map((p) => ({
             sku_id: byName.get(p.name.slice(0, 200))!,
-            quantity_on_hand: p.quantity ?? 0,
+            quantity_on_hand: p.stock ?? p.quantity ?? 0,
             last_synced: syncedAt,
           }));
 

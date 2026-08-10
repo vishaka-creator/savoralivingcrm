@@ -22,6 +22,7 @@ export interface ProductRow {
   name: string;
   code: string | null;
   quantity: number | null;
+  stock: number | null;
   cost: number | null;
   dimensions: string | null;
   dimensionsCatalogue: string | null;
@@ -144,7 +145,10 @@ function findHeader(rows: Row[]): { index: number; cols: Record<string, number> 
     });
     const cols: Record<string, number> = {};
     for (const [key, v] of Object.entries(best)) cols[key] = v.idx;
-    if (cols["name"] !== undefined && (cols["quantity"] !== undefined || cols["code"] !== undefined)) {
+    if (
+      cols["name"] !== undefined &&
+      (cols["quantity"] !== undefined || cols["stock"] !== undefined || cols["code"] !== undefined)
+    ) {
       return { index: i, cols };
     }
   }
@@ -174,6 +178,7 @@ export function parseProducts(rows: Row[]): ProductRow[] {
       name: label,
       code: code || null,
       quantity: cols["quantity"] !== undefined ? toNumber(row[cols["quantity"]!]) : null,
+      stock: cols["stock"] !== undefined ? toNumber(row[cols["stock"]!]) : null,
       cost: cols["cost"] !== undefined ? toNumber(row[cols["cost"]!]) : null,
       dimensions: cell(row, "dimensions"),
       dimensionsCatalogue: cell(row, "dimensionsCatalogue"),
@@ -313,6 +318,7 @@ export async function fetchSnapshot(): Promise<SheetSnapshot> {
         name: prev?.name || r.name,
         code: prev?.code ?? r.code,
         quantity: prev?.quantity ?? r.quantity ?? match?.quantity ?? null,
+        stock: prev?.stock ?? r.stock ?? match?.stock ?? null,
         cost: prev?.cost ?? r.cost ?? match?.cost ?? null,
         dimensions: prev?.dimensions ?? r.dimensions ?? match?.dimensions ?? null,
         dimensionsCatalogue:
