@@ -291,9 +291,14 @@ export type Database = {
           code: string | null
           collection_slug: string
           created_at: string
+          dimensions: string | null
+          dimensions_catalogue: string | null
           id: string
+          image_url: string | null
           name: string
           ordered_quantity: number | null
+          printed_image_url: string | null
+          product_name: string | null
           shopify_product_id: string | null
           unit: string
         }
@@ -301,9 +306,14 @@ export type Database = {
           code?: string | null
           collection_slug: string
           created_at?: string
+          dimensions?: string | null
+          dimensions_catalogue?: string | null
           id?: string
+          image_url?: string | null
           name: string
           ordered_quantity?: number | null
+          printed_image_url?: string | null
+          product_name?: string | null
           shopify_product_id?: string | null
           unit?: string
         }
@@ -311,9 +321,14 @@ export type Database = {
           code?: string | null
           collection_slug?: string
           created_at?: string
+          dimensions?: string | null
+          dimensions_catalogue?: string | null
           id?: string
+          image_url?: string | null
           name?: string
           ordered_quantity?: number | null
+          printed_image_url?: string | null
+          product_name?: string | null
           shopify_product_id?: string | null
           unit?: string
         }
