@@ -40,7 +40,13 @@ export const getDashboard = createServerFn({ method: "GET" })
     const { supabase } = context;
     const [collections, skus, materials, boxes, boms, sales, sync] = await Promise.all([
       supabase.from("collections").select("*").order("sort_order"),
-      supabase.from("skus").select("id, collection_slug, name, code, unit"),
+      supabase
+        .from("skus")
+        .select(
+          "id, collection_slug, name, code, unit, ordered_quantity, dimensions, dimensions_catalogue, product_name, image_url, printed_image_url",
+        )
+        .order("name"),
+
       supabase.from("raw_materials").select("sku_id, quantity_on_hand, low_stock_threshold, unit"),
       supabase.from("boxes").select("*"),
       supabase.from("bom").select("*"),
