@@ -6,6 +6,16 @@ import { AlertTriangle, ArrowRight, Boxes, PackageCheck, TrendingUp } from "luci
 import { AppShell } from "@/components/savora/AppShell";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
 import { getDashboard } from "@/lib/savora.functions";
 import { inr, num, trend } from "@/lib/format";
 
@@ -110,50 +120,154 @@ function Dashboard() {
             )}
       </div>
 
-      <h2 className="mt-12 text-xl">Collections</h2>
-      <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {isPending
-          ? Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-48" />)
-          : data?.cards.map((c) => (
-              <Link
-                key={c.slug}
-                to="/collections/$slug"
-                params={{ slug: c.slug }}
-                className="panel group relative overflow-hidden p-5 transition-shadow hover:shadow-raised"
-              >
-                <span
-                  className={`absolute inset-x-0 top-0 h-1 ${accent[c.slug] ?? "bg-primary"}`}
-                />
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <h3 className="text-lg">{c.name}</h3>
-                    <p className="text-xs text-muted-foreground">{c.sheetTab}</p>
-                  </div>
-                  {c.lowStockCount > 0 && (
-                    <Badge variant="outline" className="border-warning text-warning">
-                      {c.lowStockCount} low
-                    </Badge>
-                  )}
-                </div>
-
-                <div className="mt-5 grid grid-cols-3 gap-3">
-                  <Cell label="Sets buildable" value={num(c.setsBuildable)} emphasise />
-                  <Cell label="Pieces in hand" value={num(c.totalMaterial)} />
-                  <Cell label="Boxes" value={num(c.boxCount)} />
-                </div>
-
-                <div className="mt-5 flex items-center justify-between border-t border-border pt-3 text-xs text-muted-foreground">
-                  <span>
-                    {c.skuCount} wares · {inr(c.monthSales)} this month
-                  </span>
-                  <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
-                </div>
-              </Link>
-            ))}
+      <div className="mt-12 flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h2 className="text-xl">Ware list</h2>
+          <p className="text-sm text-muted-foreground">
+            Same columns as the Google Sheet, one tab per collection.
+          </p>
+        </div>
       </div>
+
+      {isPending ? (
+        <Skeleton className="mt-4 h-64" />
+      ) : (
+        data && (
+          <Tabs defaultValue={data.cards[0]?.slug ?? "zebra"} className="mt-4">
+            <TabsList className="flex-wrap">
+              {data.cards.map((c) => (
+                <TabsTrigger key={c.slug} value={c.slug} className="gap-2">
+                  <span className={`size-2 rounded-full ${accent[c.slug] ?? "bg-primary"}`} />
+                  {c.name}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+
+            {data.cards.map((c) => (
+              <TabsContent key={c.slug} value={c.slug} className="space-y-4">
+                <div className="panel flex flex-wrap items-center justify-between gap-4 px-5 py-4">
+                  <div className="flex flex-wrap gap-8">
+                    <Stat label="Sets buildable" value={num(c.setsBuildable)} emphasise />
+                    <Stat label="Pieces in hand" value={num(c.totalMaterial)} />
+                    <Stat label="Boxes" value={num(c.boxCount)} />
+                    <Stat label="Sales this month" value={inr(c.monthSales)} />
+                  </div>
+                  <div className="flex items-center gap-3">
+                    {c.lowStockCount > 0 && (
+                      <Badge variant="outline" className="border-warning text-warning">
+                        {c.lowStockCount} low
+                      </Badge>
+                    )}
+                    <Link
+                      to="/collections/$slug"
+                      params={{ slug: c.slug }}
+                      className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
+                    >
+                      Open collection <ArrowRight className="size-4" />
+                    </Link>
+                  </div>
+                </div>
+
+                <div className="panel overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="min-w-56">Product (Ware)</TableHead>
+                        <TableHead>Code</TableHead>
+                        <TableHead className="min-w-40">Dimensions</TableHead>
+                        <TableHead>Dimension in Catalogue</TableHead>
+                        <TableHead className="min-w-40">Product Name</TableHead>
+                        <TableHead>Images</TableHead>
+                        <TableHead className="text-right">Orderd Quantity</TableHead>
+                        <TableHead>Final Printed Image</TableHead>
+                        <TableHead className="text-right">Stock in Hand</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {c.wares.map((w) => (
+                        <TableRow key={w.id}>
+                          <TableCell className="font-medium">{w.ware}</TableCell>
+                          <TableCell className="num text-muted-foreground">
+                            {w.code ?? "—"}
+                          </TableCell>
+                          <TableCell className="whitespace-pre-line text-xs text-muted-foreground">
+                            {w.dimensions ?? "—"}
+                          </TableCell>
+                          <TableCell className="num">{w.dimensionsCatalogue ?? "—"}</TableCell>
+                          <TableCell>{w.productName ?? "—"}</TableCell>
+                          <TableCell>
+                            <Thumb url={w.imageUrl} alt={`${w.ware} reference image`} />
+                          </TableCell>
+                          <TableCell className="num text-right">
+                            {num(w.orderedQuantity)}
+                          </TableCell>
+                          <TableCell>
+                            <Thumb url={w.printedImageUrl} alt={`${w.ware} final printed image`} />
+                          </TableCell>
+                          <TableCell className="num text-right">
+                            <span className="inline-flex items-center gap-1.5">
+                              {w.stockInHand <= w.threshold && (
+                                <AlertTriangle className="size-3.5 text-warning" />
+                              )}
+                              {num(w.stockInHand)}
+                            </span>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                      {!c.wares.length && (
+                        <TableRow>
+                          <TableCell colSpan={9} className="text-sm text-muted-foreground">
+                            No wares synced for this collection yet.
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </TabsContent>
+            ))}
+          </Tabs>
+        )
+      )}
     </AppShell>
   );
 }
+
+function Thumb({ url, alt }: { url: string | null; alt: string }) {
+  if (!url || !/^https?:\/\//.test(url)) {
+    return <span className="text-muted-foreground">—</span>;
+  }
+  return (
+    <a href={url} target="_blank" rel="noreferrer" className="block">
+      <img
+        src={url}
+        alt={alt}
+        loading="lazy"
+        className="size-10 rounded border border-border object-cover"
+      />
+    </a>
+  );
+}
+
+function Stat({
+  label,
+  value,
+  emphasise = false,
+}: {
+  label: string;
+  value: string;
+  emphasise?: boolean;
+}) {
+  return (
+    <div>
+      <div className="label-caps">{label}</div>
+      <div className={`metric mt-1 ${emphasise ? "text-2xl text-primary" : "text-xl"}`}>
+        {value}
+      </div>
+    </div>
+  );
+}
+
 
 function Kpi({
   label,
@@ -176,25 +290,6 @@ function Kpi({
       </div>
       <div className="metric mt-3 text-3xl">{value}</div>
       <p className="mt-2 text-xs text-muted-foreground">{hint}</p>
-    </div>
-  );
-}
-
-function Cell({
-  label,
-  value,
-  emphasise = false,
-}: {
-  label: string;
-  value: string;
-  emphasise?: boolean;
-}) {
-  return (
-    <div>
-      <div className="label-caps">{label}</div>
-      <div className={`metric mt-1 ${emphasise ? "text-2xl text-primary" : "text-xl"}`}>
-        {value}
-      </div>
     </div>
   );
 }

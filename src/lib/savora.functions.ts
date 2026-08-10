@@ -40,7 +40,13 @@ export const getDashboard = createServerFn({ method: "GET" })
     const { supabase } = context;
     const [collections, skus, materials, boxes, boms, sales, sync] = await Promise.all([
       supabase.from("collections").select("*").order("sort_order"),
-      supabase.from("skus").select("id, collection_slug, name, code, unit"),
+      supabase
+        .from("skus")
+        .select(
+          "id, collection_slug, name, code, unit, ordered_quantity, dimensions, dimensions_catalogue, product_name, image_url, printed_image_url",
+        )
+        .order("name"),
+
       supabase.from("raw_materials").select("sku_id, quantity_on_hand, low_stock_threshold, unit"),
       supabase.from("boxes").select("*"),
       supabase.from("bom").select("*"),
@@ -85,8 +91,26 @@ export const getDashboard = createServerFn({ method: "GET" })
         monthSales: mySales
           .filter((s) => (s.month ?? "").toLowerCase() === thisMonth.toLowerCase())
           .reduce((a, s) => a + Number(s.amount ?? 0), 0),
+        // Sheet-style ware list (mirrors the Google Sheet column order).
+        wares: mySkus.map((s) => {
+          const m = materialBySku.get(s.id);
+          return {
+            id: s.id,
+            ware: s.name,
+            code: s.code,
+            dimensions: s.dimensions,
+            dimensionsCatalogue: s.dimensions_catalogue,
+            productName: s.product_name,
+            imageUrl: s.image_url,
+            printedImageUrl: s.printed_image_url,
+            orderedQuantity: s.ordered_quantity === null ? null : Number(s.ordered_quantity),
+            stockInHand: Number(m?.quantity_on_hand ?? 0),
+            threshold: Number(m?.low_stock_threshold ?? 20),
+          };
+        }),
       };
     });
+
 
     const monthTotal = (m: string) =>
       (sales.data ?? [])

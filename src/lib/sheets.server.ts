@@ -22,8 +22,15 @@ export interface ProductRow {
   name: string;
   code: string | null;
   quantity: number | null;
+  stock: number | null;
   cost: number | null;
+  dimensions: string | null;
+  dimensionsCatalogue: string | null;
+  productName: string | null;
+  image: string | null;
+  printedImage: string | null;
 }
+
 
 export interface BoxRow {
   collection_slug: CollectionSlug;
@@ -119,21 +126,35 @@ export function toISODate(v: unknown): string | null {
 function findHeader(rows: Row[]): { index: number; cols: Record<string, number> } | null {
   for (let i = 0; i < Math.min(rows.length, 12); i++) {
     const row = rows[i] ?? [];
-    const cols: Record<string, number> = {};
+    // Each key keeps the column whose header matched its most specific keyword,
+    // so "Product (Ware)" wins over a generic "Collection & Ware" column.
+    const best: Record<string, { idx: number; rank: number }> = {};
     row.forEach((cell, idx) => {
       const label = text(cell).toLowerCase();
       if (!label) return;
       for (const [key, keywords] of Object.entries(HEADER_KEYWORDS)) {
-        if (cols[key] !== undefined) continue;
-        if (keywords.some((k) => label.includes(k))) cols[key] = idx;
+        const rank = keywords.findIndex((k) => label.includes(k));
+        if (rank === -1) continue;
+        const owner = Object.entries(best).find(([k, v]) => k !== key && v.idx === idx);
+        if (owner && owner[1].rank <= rank) continue;
+        const current = best[key];
+        if (current && current.rank <= rank) continue;
+        if (owner) delete best[owner[0]];
+        best[key] = { idx, rank };
       }
     });
-    if (cols["name"] !== undefined && (cols["quantity"] !== undefined || cols["code"] !== undefined)) {
+    const cols: Record<string, number> = {};
+    for (const [key, v] of Object.entries(best)) cols[key] = v.idx;
+    if (
+      cols["name"] !== undefined &&
+      (cols["quantity"] !== undefined || cols["stock"] !== undefined || cols["code"] !== undefined)
+    ) {
       return { index: i, cols };
     }
   }
   return null;
 }
+
 
 const isTotalRow = (s: string) => /^(total|grand total|sub total)/i.test(s);
 
@@ -142,6 +163,8 @@ export function parseProducts(rows: Row[]): ProductRow[] {
   const header = findHeader(rows);
   if (!header) return [];
   const { index, cols } = header;
+  const cell = (row: Row, key: string): string | null =>
+    cols[key] !== undefined ? text(row[cols[key]!]) || null : null;
   const out: ProductRow[] = [];
   for (let i = index + 1; i < rows.length; i++) {
     const row = rows[i] ?? [];
@@ -155,11 +178,18 @@ export function parseProducts(rows: Row[]): ProductRow[] {
       name: label,
       code: code || null,
       quantity: cols["quantity"] !== undefined ? toNumber(row[cols["quantity"]!]) : null,
+      stock: cols["stock"] !== undefined ? toNumber(row[cols["stock"]!]) : null,
       cost: cols["cost"] !== undefined ? toNumber(row[cols["cost"]!]) : null,
+      dimensions: cell(row, "dimensions"),
+      dimensionsCatalogue: cell(row, "dimensionsCatalogue"),
+      productName: cell(row, "productName"),
+      image: cell(row, "image"),
+      printedImage: cell(row, "printedImage"),
     });
   }
   return out;
 }
+
 
 const normalise = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
 
@@ -288,8 +318,16 @@ export async function fetchSnapshot(): Promise<SheetSnapshot> {
         name: prev?.name || r.name,
         code: prev?.code ?? r.code,
         quantity: prev?.quantity ?? r.quantity ?? match?.quantity ?? null,
+        stock: prev?.stock ?? r.stock ?? match?.stock ?? null,
         cost: prev?.cost ?? r.cost ?? match?.cost ?? null,
+        dimensions: prev?.dimensions ?? r.dimensions ?? match?.dimensions ?? null,
+        dimensionsCatalogue:
+          prev?.dimensionsCatalogue ?? r.dimensionsCatalogue ?? match?.dimensionsCatalogue ?? null,
+        productName: prev?.productName ?? r.productName ?? match?.productName ?? null,
+        image: prev?.image ?? r.image ?? match?.image ?? null,
+        printedImage: prev?.printedImage ?? r.printedImage ?? match?.printedImage ?? null,
       });
+
     };
     stockRows.forEach(upsert);
     // Cost tabs sometimes hold wares the collection tab omits.
