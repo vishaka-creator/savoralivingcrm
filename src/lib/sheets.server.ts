@@ -126,12 +126,17 @@ function findHeader(rows: Row[]): { index: number; cols: Record<string, number> 
   for (let i = 0; i < Math.min(rows.length, 12); i++) {
     const row = rows[i] ?? [];
     const cols: Record<string, number> = {};
+    const used = new Set<number>();
     row.forEach((cell, idx) => {
       const label = text(cell).toLowerCase();
       if (!label) return;
       for (const [key, keywords] of Object.entries(HEADER_KEYWORDS)) {
         if (cols[key] !== undefined) continue;
-        if (keywords.some((k) => label.includes(k))) cols[key] = idx;
+        if (used.has(idx)) continue;
+        if (keywords.some((k) => label.includes(k))) {
+          cols[key] = idx;
+          used.add(idx);
+        }
       }
     });
     if (cols["name"] !== undefined && (cols["quantity"] !== undefined || cols["code"] !== undefined)) {
@@ -148,6 +153,8 @@ export function parseProducts(rows: Row[]): ProductRow[] {
   const header = findHeader(rows);
   if (!header) return [];
   const { index, cols } = header;
+  const cell = (row: Row, key: string): string | null =>
+    cols[key] !== undefined ? text(row[cols[key]!]) || null : null;
   const out: ProductRow[] = [];
   for (let i = index + 1; i < rows.length; i++) {
     const row = rows[i] ?? [];
@@ -162,10 +169,16 @@ export function parseProducts(rows: Row[]): ProductRow[] {
       code: code || null,
       quantity: cols["quantity"] !== undefined ? toNumber(row[cols["quantity"]!]) : null,
       cost: cols["cost"] !== undefined ? toNumber(row[cols["cost"]!]) : null,
+      dimensions: cell(row, "dimensions"),
+      dimensionsCatalogue: cell(row, "dimensionsCatalogue"),
+      productName: cell(row, "productName"),
+      image: cell(row, "image"),
+      printedImage: cell(row, "printedImage"),
     });
   }
   return out;
 }
+
 
 const normalise = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
 
