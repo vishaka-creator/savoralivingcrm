@@ -308,7 +308,14 @@ export async function fetchSnapshot(): Promise<SheetSnapshot> {
         code: prev?.code ?? r.code,
         quantity: prev?.quantity ?? r.quantity ?? match?.quantity ?? null,
         cost: prev?.cost ?? r.cost ?? match?.cost ?? null,
+        dimensions: prev?.dimensions ?? r.dimensions ?? match?.dimensions ?? null,
+        dimensionsCatalogue:
+          prev?.dimensionsCatalogue ?? r.dimensionsCatalogue ?? match?.dimensionsCatalogue ?? null,
+        productName: prev?.productName ?? r.productName ?? match?.productName ?? null,
+        image: prev?.image ?? r.image ?? match?.image ?? null,
+        printedImage: prev?.printedImage ?? r.printedImage ?? match?.printedImage ?? null,
       });
+
     };
     stockRows.forEach(upsert);
     // Cost tabs sometimes hold wares the collection tab omits.
