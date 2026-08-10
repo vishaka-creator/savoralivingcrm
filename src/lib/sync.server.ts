@@ -34,7 +34,13 @@ export async function runSheetSync(opts: {
           name: p.name.slice(0, 200),
           code: p.code,
           ordered_quantity: p.quantity,
+          dimensions: p.dimensions,
+          dimensions_catalogue: p.dimensionsCatalogue,
+          product_name: p.productName,
+          image_url: p.image,
+          printed_image_url: p.printedImage,
         }));
+
 
       if (skuRows.length) {
         const { data: upserted, error } = await supabaseAdmin
