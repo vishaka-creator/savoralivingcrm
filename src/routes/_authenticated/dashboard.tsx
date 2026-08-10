@@ -293,22 +293,3 @@ function Kpi({
     </div>
   );
 }
-
-function Cell({
-  label,
-  value,
-  emphasise = false,
-}: {
-  label: string;
-  value: string;
-  emphasise?: boolean;
-}) {
-  return (
-    <div>
-      <div className="label-caps">{label}</div>
-      <div className={`metric mt-1 ${emphasise ? "text-2xl text-primary" : "text-xl"}`}>
-        {value}
-      </div>
-    </div>
-  );
-}
