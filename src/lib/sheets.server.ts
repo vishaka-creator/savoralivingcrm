@@ -23,7 +23,13 @@ export interface ProductRow {
   code: string | null;
   quantity: number | null;
   cost: number | null;
+  dimensions: string | null;
+  dimensionsCatalogue: string | null;
+  productName: string | null;
+  image: string | null;
+  printedImage: string | null;
 }
+
 
 export interface BoxRow {
   collection_slug: CollectionSlug;
