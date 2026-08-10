@@ -89,8 +89,17 @@ export const collectionBySlug = (slug: string) =>
 
 export const DEFAULT_LOW_STOCK_THRESHOLD = 20;
 
-/** Column header keywords used by the tolerant sheet parser. */
+/**
+ * Column header keywords used by the tolerant sheet parser.
+ * Order matters: more specific keys must come first so a header like
+ * "Product Name" is not consumed by the generic "product" ware column.
+ */
 export const HEADER_KEYWORDS = {
+  productName: ["product name"],
+  dimensionsCatalogue: ["dimension in catalogue", "dimensions in catalogue"],
+  dimensions: ["dimensions", "dimension"],
+  printedImage: ["final printed image", "printed image"],
+  image: ["images", "image"],
   name: ["product (ware)", "product", "description of goods", "description", "ware", "item"],
   code: ["ware code", "code"],
   quantity: [
@@ -110,5 +119,6 @@ export const HEADER_KEYWORDS = {
     "unit price",
   ],
 };
+
 
 export const SALES_STATUSES = ["Received", "Invoice raised", "Pending", "Delivered"] as const;
