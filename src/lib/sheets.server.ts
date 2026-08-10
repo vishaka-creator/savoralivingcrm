@@ -125,26 +125,32 @@ export function toISODate(v: unknown): string | null {
 function findHeader(rows: Row[]): { index: number; cols: Record<string, number> } | null {
   for (let i = 0; i < Math.min(rows.length, 12); i++) {
     const row = rows[i] ?? [];
-    const cols: Record<string, number> = {};
-    const used = new Set<number>();
+    // Each key keeps the column whose header matched its most specific keyword,
+    // so "Product (Ware)" wins over a generic "Collection & Ware" column.
+    const best: Record<string, { idx: number; rank: number }> = {};
     row.forEach((cell, idx) => {
       const label = text(cell).toLowerCase();
       if (!label) return;
       for (const [key, keywords] of Object.entries(HEADER_KEYWORDS)) {
-        if (cols[key] !== undefined) continue;
-        if (used.has(idx)) continue;
-        if (keywords.some((k) => label.includes(k))) {
-          cols[key] = idx;
-          used.add(idx);
-        }
+        const rank = keywords.findIndex((k) => label.includes(k));
+        if (rank === -1) continue;
+        const owner = Object.entries(best).find(([k, v]) => k !== key && v.idx === idx);
+        if (owner && owner[1].rank <= rank) continue;
+        const current = best[key];
+        if (current && current.rank <= rank) continue;
+        if (owner) delete best[owner[0]];
+        best[key] = { idx, rank };
       }
     });
+    const cols: Record<string, number> = {};
+    for (const [key, v] of Object.entries(best)) cols[key] = v.idx;
     if (cols["name"] !== undefined && (cols["quantity"] !== undefined || cols["code"] !== undefined)) {
       return { index: i, cols };
     }
   }
   return null;
 }
+
 
 const isTotalRow = (s: string) => /^(total|grand total|sub total)/i.test(s);
 
