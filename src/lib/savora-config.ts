@@ -102,14 +102,15 @@ export const HEADER_KEYWORDS = {
   image: ["images", "image"],
   name: ["product (ware)", "product", "description of goods", "description", "ware", "item"],
   code: ["ware code", "code"],
+  stock: ["stock in hand", "stock"],
   quantity: [
-    "stock",
     "orderd quantity",
     "ordered quantity",
     "quantity ordered",
     "quantity",
     "revised",
   ],
+
   cost: [
     "per unit price",
     "price per unit",
