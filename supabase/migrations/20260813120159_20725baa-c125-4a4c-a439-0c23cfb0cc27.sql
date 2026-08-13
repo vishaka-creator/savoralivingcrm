@@ -1,0 +1,1 @@
+ALTER TABLE public.skus ADD COLUMN IF NOT EXISTS approx_weight_grams numeric;

@@ -43,7 +43,7 @@ export const getDashboard = createServerFn({ method: "GET" })
       supabase
         .from("skus")
         .select(
-          "id, collection_slug, name, code, unit, ordered_quantity, dimensions, dimensions_catalogue, product_name, image_url, printed_image_url",
+          "id, collection_slug, name, code, unit, ordered_quantity, approx_weight_grams, dimensions, dimensions_catalogue, product_name, image_url, printed_image_url",
         )
         .order("name"),
 
@@ -99,6 +99,8 @@ export const getDashboard = createServerFn({ method: "GET" })
             ware: s.name,
             code: s.code,
             dimensions: s.dimensions,
+            approxWeight:
+              s.approx_weight_grams === null ? null : Number(s.approx_weight_grams),
             dimensionsCatalogue: s.dimensions_catalogue,
             productName: s.product_name,
             imageUrl: s.image_url,

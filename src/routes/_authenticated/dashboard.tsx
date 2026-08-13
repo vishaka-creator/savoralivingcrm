@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -14,7 +15,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 import { getDashboard } from "@/lib/savora.functions";
 import { inr, num, trend } from "@/lib/format";
@@ -56,8 +56,11 @@ function Dashboard() {
     queryFn: () => fetchDashboard(),
   });
 
-  const delta =
-    data && trend(data.totals.salesThisMonth, data.totals.salesLastMonth);
+  const [selected, setSelected] = useState<string | null>(null);
+  const cards = data?.cards ?? [];
+  const active = cards.find((c) => c.slug === selected) ?? cards[0] ?? null;
+
+  const delta = data && trend(data.totals.salesThisMonth, data.totals.salesLastMonth);
 
   return (
     <AppShell lastSync={data?.lastSync ?? null}>
@@ -97,136 +100,149 @@ function Dashboard() {
                 />
                 <Kpi
                   label="Sets buildable"
-                  value={num(data.cards.reduce((a, c) => a + c.setsBuildable, 0))}
+                  value={num(cards.reduce((a, c) => a + c.setsBuildable, 0))}
                   icon={PackageCheck}
-                  hint={`${data.cards.reduce((a, c) => a + c.setDefinitions, 0)} set recipes defined`}
+                  hint={`${cards.reduce((a, c) => a + c.setDefinitions, 0)} set recipes defined`}
                 />
                 <Kpi
                   label="Boxes in hand"
                   value={num(data.totals.boxes)}
                   icon={Boxes}
-                  hint={`${data.cards.reduce((a, c) => a + c.boxSkuCount, 0)} box SKUs`}
+                  hint={`${cards.reduce((a, c) => a + c.boxSkuCount, 0)} box SKUs`}
                 />
                 <Kpi
                   label="Low stock items"
-                  value={num(data.cards.reduce((a, c) => a + c.lowStockCount, 0))}
+                  value={num(cards.reduce((a, c) => a + c.lowStockCount, 0))}
                   icon={AlertTriangle}
                   hint={`${data.totals.pending} sales rows not yet received`}
-                  tone={
-                    data.cards.reduce((a, c) => a + c.lowStockCount, 0) > 0 ? "warning" : "default"
-                  }
+                  tone={cards.reduce((a, c) => a + c.lowStockCount, 0) > 0 ? "warning" : "default"}
                 />
               </>
             )}
       </div>
 
-      <div className="mt-12 flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h2 className="text-xl">Ware list</h2>
-          <p className="text-sm text-muted-foreground">
-            Same columns as the Google Sheet, one tab per collection.
-          </p>
-        </div>
+      <div className="mt-12">
+        <h2 className="text-xl">Ware list</h2>
+        <p className="text-sm text-muted-foreground">
+          Pick a collection on the left; its wares are listed on the right.
+        </p>
       </div>
 
       {isPending ? (
         <Skeleton className="mt-4 h-64" />
       ) : (
-        data && (
-          <Tabs defaultValue={data.cards[0]?.slug ?? "zebra"} className="mt-4">
-            <TabsList className="flex-wrap">
-              {data.cards.map((c) => (
-                <TabsTrigger key={c.slug} value={c.slug} className="gap-2">
-                  <span className={`size-2 rounded-full ${accent[c.slug] ?? "bg-primary"}`} />
-                  {c.name}
-                </TabsTrigger>
-              ))}
-            </TabsList>
+        active && (
+          <div className="mt-4 grid gap-6 lg:grid-cols-[240px_minmax(0,1fr)]">
+            {/* Left: subject list */}
+            <nav className="panel h-fit p-2 lg:sticky lg:top-6">
+              <ul className="space-y-1">
+                {cards.map((c) => {
+                  const isActive = c.slug === active.slug;
+                  return (
+                    <li key={c.slug}>
+                      <button
+                        type="button"
+                        onClick={() => setSelected(c.slug)}
+                        aria-current={isActive ? "true" : undefined}
+                        className={`flex w-full items-center gap-2.5 rounded-md px-3 py-2.5 text-left text-sm transition-colors ${
+                          isActive
+                            ? "bg-primary/10 text-primary"
+                            : "text-foreground hover:bg-muted/60"
+                        }`}
+                      >
+                        <span
+                          className={`size-2 shrink-0 rounded-full ${accent[c.slug] ?? "bg-primary"}`}
+                        />
+                        <span className="min-w-0 flex-1 truncate font-medium">{c.name}</span>
+                        <span className="num shrink-0 text-xs text-muted-foreground">
+                          {num(c.skuCount)}
+                        </span>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            </nav>
 
-            {data.cards.map((c) => (
-              <TabsContent key={c.slug} value={c.slug} className="space-y-4">
-                <div className="panel flex flex-wrap items-center justify-between gap-4 px-5 py-4">
-                  <div className="flex flex-wrap gap-8">
-                    <Stat label="Sets buildable" value={num(c.setsBuildable)} emphasise />
-                    <Stat label="Pieces in hand" value={num(c.totalMaterial)} />
-                    <Stat label="Boxes" value={num(c.boxCount)} />
-                    <Stat label="Sales this month" value={inr(c.monthSales)} />
-                  </div>
-                  <div className="flex items-center gap-3">
-                    {c.lowStockCount > 0 && (
-                      <Badge variant="outline" className="border-warning text-warning">
-                        {c.lowStockCount} low
-                      </Badge>
-                    )}
-                    <Link
-                      to="/collections/$slug"
-                      params={{ slug: c.slug }}
-                      className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
-                    >
-                      Open collection <ArrowRight className="size-4" />
-                    </Link>
-                  </div>
+            {/* Right: selected collection detail */}
+            <div className="min-w-0 space-y-4">
+              <div className="panel grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 px-5 py-4 sm:flex sm:flex-wrap sm:justify-between">
+                <div className="flex min-w-0 flex-wrap gap-8">
+                  <Stat label="Sets buildable" value={num(active.setsBuildable)} emphasise />
+                  <Stat label="Pieces in hand" value={num(active.totalMaterial)} />
+                  <Stat label="Boxes" value={num(active.boxCount)} />
+                  <Stat label="Sales this month" value={inr(active.monthSales)} />
                 </div>
+                <div className="flex shrink-0 items-center gap-3">
+                  {active.lowStockCount > 0 && (
+                    <Badge variant="outline" className="border-warning text-warning">
+                      {active.lowStockCount} low
+                    </Badge>
+                  )}
+                  <Link
+                    to="/collections/$slug"
+                    params={{ slug: active.slug }}
+                    className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
+                  >
+                    Open collection <ArrowRight className="size-4" />
+                  </Link>
+                </div>
+              </div>
 
-                <div className="panel overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="min-w-56">Product (Ware)</TableHead>
-                        <TableHead>Code</TableHead>
-                        <TableHead className="min-w-40">Dimensions</TableHead>
-                        <TableHead>Dimension in Catalogue</TableHead>
-                        <TableHead className="min-w-40">Product Name</TableHead>
-                        <TableHead>Images</TableHead>
-                        <TableHead className="text-right">Orderd Quantity</TableHead>
-                        <TableHead>Final Printed Image</TableHead>
-                        <TableHead className="text-right">Stock in Hand</TableHead>
+              <div className="panel overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="min-w-56">Product (Ware)</TableHead>
+                      <TableHead>Code</TableHead>
+                      <TableHead className="min-w-36">Dimension in Catalogue</TableHead>
+                      <TableHead className="min-w-40">Product Name</TableHead>
+                      <TableHead>Images</TableHead>
+                      <TableHead className="text-right">Orderd Quantity</TableHead>
+                      <TableHead>Final Printed Image</TableHead>
+                      <TableHead className="text-right">Approx Weight (gm)</TableHead>
+                      <TableHead className="text-right">Stock</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {active.wares.map((w) => (
+                      <TableRow key={w.id}>
+                        <TableCell className="font-medium">{w.ware}</TableCell>
+                        <TableCell className="num text-muted-foreground">{w.code ?? "—"}</TableCell>
+                        <TableCell className="num">{w.dimensionsCatalogue ?? "—"}</TableCell>
+                        <TableCell>{w.productName ?? "—"}</TableCell>
+                        <TableCell>
+                          <Thumb url={w.imageUrl} alt={`${w.ware} reference image`} />
+                        </TableCell>
+                        <TableCell className="num text-right">{num(w.orderedQuantity)}</TableCell>
+                        <TableCell>
+                          <Thumb url={w.printedImageUrl} alt={`${w.ware} final printed image`} />
+                        </TableCell>
+                        <TableCell className="num text-right">
+                          {w.approxWeight === null ? "—" : num(w.approxWeight)}
+                        </TableCell>
+                        <TableCell className="num text-right">
+                          <span className="inline-flex items-center gap-1.5">
+                            {w.stockInHand <= w.threshold && (
+                              <AlertTriangle className="size-3.5 text-warning" />
+                            )}
+                            {num(w.stockInHand)}
+                          </span>
+                        </TableCell>
                       </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {c.wares.map((w) => (
-                        <TableRow key={w.id}>
-                          <TableCell className="font-medium">{w.ware}</TableCell>
-                          <TableCell className="num text-muted-foreground">
-                            {w.code ?? "—"}
-                          </TableCell>
-                          <TableCell className="whitespace-pre-line text-xs text-muted-foreground">
-                            {w.dimensions ?? "—"}
-                          </TableCell>
-                          <TableCell className="num">{w.dimensionsCatalogue ?? "—"}</TableCell>
-                          <TableCell>{w.productName ?? "—"}</TableCell>
-                          <TableCell>
-                            <Thumb url={w.imageUrl} alt={`${w.ware} reference image`} />
-                          </TableCell>
-                          <TableCell className="num text-right">
-                            {num(w.orderedQuantity)}
-                          </TableCell>
-                          <TableCell>
-                            <Thumb url={w.printedImageUrl} alt={`${w.ware} final printed image`} />
-                          </TableCell>
-                          <TableCell className="num text-right">
-                            <span className="inline-flex items-center gap-1.5">
-                              {w.stockInHand <= w.threshold && (
-                                <AlertTriangle className="size-3.5 text-warning" />
-                              )}
-                              {num(w.stockInHand)}
-                            </span>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                      {!c.wares.length && (
-                        <TableRow>
-                          <TableCell colSpan={9} className="text-sm text-muted-foreground">
-                            No wares synced for this collection yet.
-                          </TableCell>
-                        </TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
-              </TabsContent>
-            ))}
-          </Tabs>
+                    ))}
+                    {!active.wares.length && (
+                      <TableRow>
+                        <TableCell colSpan={9} className="text-sm text-muted-foreground">
+                          No wares synced for this collection yet.
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+          </div>
         )
       )}
     </AppShell>
@@ -267,7 +283,6 @@ function Stat({
     </div>
   );
 }
-
 
 function Kpi({
   label,
