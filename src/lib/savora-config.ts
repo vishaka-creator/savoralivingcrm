@@ -95,6 +95,7 @@ export const DEFAULT_LOW_STOCK_THRESHOLD = 20;
  * "Product Name" is not consumed by the generic "product" ware column.
  */
 export const HEADER_KEYWORDS = {
+  weight: ["approx weight", "approximate weight", "weight (gm)", "weight"],
   productName: ["product name"],
   dimensionsCatalogue: ["dimension in catalogue", "dimensions in catalogue"],
   dimensions: ["dimensions", "dimension"],

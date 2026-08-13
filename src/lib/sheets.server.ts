@@ -24,6 +24,7 @@ export interface ProductRow {
   quantity: number | null;
   stock: number | null;
   cost: number | null;
+  weight: number | null;
   dimensions: string | null;
   dimensionsCatalogue: string | null;
   productName: string | null;
@@ -180,6 +181,7 @@ export function parseProducts(rows: Row[]): ProductRow[] {
       quantity: cols["quantity"] !== undefined ? toNumber(row[cols["quantity"]!]) : null,
       stock: cols["stock"] !== undefined ? toNumber(row[cols["stock"]!]) : null,
       cost: cols["cost"] !== undefined ? toNumber(row[cols["cost"]!]) : null,
+      weight: cols["weight"] !== undefined ? toNumber(row[cols["weight"]!]) : null,
       dimensions: cell(row, "dimensions"),
       dimensionsCatalogue: cell(row, "dimensionsCatalogue"),
       productName: cell(row, "productName"),
@@ -320,6 +322,7 @@ export async function fetchSnapshot(): Promise<SheetSnapshot> {
         quantity: prev?.quantity ?? r.quantity ?? match?.quantity ?? null,
         stock: prev?.stock ?? r.stock ?? match?.stock ?? null,
         cost: prev?.cost ?? r.cost ?? match?.cost ?? null,
+        weight: prev?.weight ?? r.weight ?? match?.weight ?? null,
         dimensions: prev?.dimensions ?? r.dimensions ?? match?.dimensions ?? null,
         dimensionsCatalogue:
           prev?.dimensionsCatalogue ?? r.dimensionsCatalogue ?? match?.dimensionsCatalogue ?? null,

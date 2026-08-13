@@ -34,6 +34,7 @@ export async function runSheetSync(opts: {
           name: p.name.slice(0, 200),
           code: p.code,
           ordered_quantity: p.quantity,
+          approx_weight_grams: p.weight,
           dimensions: p.dimensions,
           dimensions_catalogue: p.dimensionsCatalogue,
           product_name: p.productName,
