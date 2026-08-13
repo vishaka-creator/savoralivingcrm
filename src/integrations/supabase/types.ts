@@ -288,6 +288,7 @@ export type Database = {
       }
       skus: {
         Row: {
+          approx_weight_grams: number | null
           code: string | null
           collection_slug: string
           created_at: string
@@ -303,6 +304,7 @@ export type Database = {
           unit: string
         }
         Insert: {
+          approx_weight_grams?: number | null
           code?: string | null
           collection_slug: string
           created_at?: string
@@ -318,6 +320,7 @@ export type Database = {
           unit?: string
         }
         Update: {
+          approx_weight_grams?: number | null
           code?: string | null
           collection_slug?: string
           created_at?: string
