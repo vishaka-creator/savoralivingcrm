@@ -45,7 +45,9 @@ export const getDashboard = createServerFn({ method: "GET" })
         .select(
           "id, collection_slug, name, code, unit, ordered_quantity, approx_weight_grams, dimensions, dimensions_catalogue, product_name, image_url, printed_image_url",
         )
+        .order("sort_order", { ascending: true, nullsFirst: false })
         .order("name"),
+
 
       supabase.from("raw_materials").select("sku_id, quantity_on_hand, low_stock_threshold, unit"),
       supabase.from("boxes").select("*"),
