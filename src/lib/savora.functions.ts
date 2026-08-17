@@ -400,7 +400,40 @@ export const deleteBomRow = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+/* --------------------------------- order -------------------------------- */
+
+export const reorderWares = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) =>
+    z
+      .object({
+        collection_slug: z.string().min(1).max(40),
+        orderedIds: z.array(z.string().uuid()).min(1).max(500),
+      })
+      .parse(d),
+  )
+  .handler(async ({ context, data }) => {
+    await assertAdmin(context);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    for (let i = 0; i < data.orderedIds.length; i++) {
+      const { error } = await supabaseAdmin
+        .from("skus")
+        .update({ sort_order: i + 1 })
+        .eq("id", data.orderedIds[i]!)
+        .eq("collection_slug", data.collection_slug);
+      if (error) throw new Error(error.message);
+    }
+    await supabaseAdmin.from("activity_log").insert({
+      actor: context.userId,
+      actor_email: context.claims?.email ?? null,
+      action: "wares.reorder",
+      detail: `${data.collection_slug} · ${data.orderedIds.length} wares reordered`,
+    });
+    return { ok: true };
+  });
+
 /* ---------------------------------- sync -------------------------------- */
+
 
 export const syncNow = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
