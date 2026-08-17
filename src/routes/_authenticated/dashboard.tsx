@@ -1,11 +1,21 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { AlertTriangle, ArrowRight, Boxes, PackageCheck, TrendingUp } from "lucide-react";
+import {
+  AlertTriangle,
+  ArrowRight,
+  Boxes,
+  ChevronDown,
+  ChevronUp,
+  PackageCheck,
+  TrendingUp,
+} from "lucide-react";
+import { toast } from "sonner";
 
-import { AppShell } from "@/components/savora/AppShell";
+import { AppShell, useMe } from "@/components/savora/AppShell";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
@@ -16,8 +26,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-import { getDashboard } from "@/lib/savora.functions";
+import { getDashboard, reorderWares } from "@/lib/savora.functions";
 import { inr, num, trend } from "@/lib/format";
+
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({
@@ -60,7 +71,40 @@ function Dashboard() {
   const cards = data?.cards ?? [];
   const active = cards.find((c) => c.slug === selected) ?? cards[0] ?? null;
 
+  const { data: me } = useMe();
+  const canReorder = !!me?.isAdmin;
+  const queryClient = useQueryClient();
+  const saveOrder = useServerFn(reorderWares);
+  const [order, setOrder] = useState<string[] | null>(null);
+
+  useEffect(() => {
+    setOrder(null);
+  }, [active?.slug]);
+
+  const reorder = useMutation({
+    mutationFn: (vars: { slug: string; ids: string[] }) =>
+      saveOrder({ data: { collection_slug: vars.slug, orderedIds: vars.ids } }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["dashboard"] }),
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const baseWares = active?.wares ?? [];
+  const wares = order
+    ? (order.map((id) => baseWares.find((w) => w.id === id)).filter(Boolean) as typeof baseWares)
+    : baseWares;
+
+  const move = (index: number, direction: -1 | 1) => {
+    if (!active) return;
+    const target = index + direction;
+    if (target < 0 || target >= wares.length) return;
+    const ids = wares.map((w) => w.id);
+    [ids[index], ids[target]] = [ids[target]!, ids[index]!];
+    setOrder(ids);
+    reorder.mutate({ slug: active.slug, ids });
+  };
+
   const delta = data && trend(data.totals.salesThisMonth, data.totals.salesLastMonth);
+
 
   return (
     <AppShell lastSync={data?.lastSync ?? null}>
@@ -190,9 +234,16 @@ function Dashboard() {
               </div>
 
               <div className="panel overflow-x-auto">
+                {canReorder && (
+                  <p className="border-b border-border px-4 py-2.5 text-xs text-muted-foreground">
+                    You're an admin — shuffle ware names with the arrows, edit any field with the
+                    pencil, or delete a ware. Changes are saved for everyone.
+                  </p>
+                )}
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      {canReorder && <TableHead className="w-16">Order</TableHead>}
                       <TableHead className="min-w-56">Product (Ware)</TableHead>
                       <TableHead>Code</TableHead>
                       <TableHead className="min-w-36">Dimension in Catalogue</TableHead>
@@ -202,11 +253,38 @@ function Dashboard() {
                       <TableHead>Final Printed Image</TableHead>
                       <TableHead className="text-right">Approx Weight (gm)</TableHead>
                       <TableHead className="text-right">Stock</TableHead>
+                      {canReorder && <TableHead className="w-24">Actions</TableHead>}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {active.wares.map((w) => (
+                    {wares.map((w, i) => (
                       <TableRow key={w.id}>
+                        {canReorder && (
+                          <TableCell>
+                            <div className="flex flex-col">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="size-6"
+                                aria-label={`Move ${w.ware} up`}
+                                disabled={i === 0 || reorder.isPending}
+                                onClick={() => move(i, -1)}
+                              >
+                                <ChevronUp className="size-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="size-6"
+                                aria-label={`Move ${w.ware} down`}
+                                disabled={i === wares.length - 1 || reorder.isPending}
+                                onClick={() => move(i, 1)}
+                              >
+                                <ChevronDown className="size-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        )}
                         <TableCell className="font-medium">{w.ware}</TableCell>
                         <TableCell className="num text-muted-foreground">{w.code ?? "—"}</TableCell>
                         <TableCell className="num">{w.dimensionsCatalogue ?? "—"}</TableCell>
@@ -229,18 +307,25 @@ function Dashboard() {
                             {num(w.stockInHand)}
                           </span>
                         </TableCell>
+                        {canReorder && (
+                          <TableCell>
+                            <WareRowActions ware={w} />
+                          </TableCell>
+                        )}
                       </TableRow>
                     ))}
-                    {!active.wares.length && (
+                    {!wares.length && (
                       <TableRow>
-                        <TableCell colSpan={9} className="text-sm text-muted-foreground">
+                        <TableCell colSpan={canReorder ? 11 : 9} className="text-sm text-muted-foreground">
                           No wares synced for this collection yet.
                         </TableCell>
                       </TableRow>
                     )}
+
                   </TableBody>
                 </Table>
               </div>
+
             </div>
           </div>
         )
