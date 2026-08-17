@@ -71,7 +71,40 @@ function Dashboard() {
   const cards = data?.cards ?? [];
   const active = cards.find((c) => c.slug === selected) ?? cards[0] ?? null;
 
+  const { data: me } = useMe();
+  const canReorder = !!me?.isAdmin;
+  const queryClient = useQueryClient();
+  const saveOrder = useServerFn(reorderWares);
+  const [order, setOrder] = useState<string[] | null>(null);
+
+  useEffect(() => {
+    setOrder(null);
+  }, [active?.slug]);
+
+  const reorder = useMutation({
+    mutationFn: (vars: { slug: string; ids: string[] }) =>
+      saveOrder({ data: { collection_slug: vars.slug, orderedIds: vars.ids } }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["dashboard"] }),
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const baseWares = active?.wares ?? [];
+  const wares = order
+    ? (order.map((id) => baseWares.find((w) => w.id === id)).filter(Boolean) as typeof baseWares)
+    : baseWares;
+
+  const move = (index: number, direction: -1 | 1) => {
+    if (!active) return;
+    const target = index + direction;
+    if (target < 0 || target >= wares.length) return;
+    const ids = wares.map((w) => w.id);
+    [ids[index], ids[target]] = [ids[target]!, ids[index]!];
+    setOrder(ids);
+    reorder.mutate({ slug: active.slug, ids });
+  };
+
   const delta = data && trend(data.totals.salesThisMonth, data.totals.salesLastMonth);
+
 
   return (
     <AppShell lastSync={data?.lastSync ?? null}>
