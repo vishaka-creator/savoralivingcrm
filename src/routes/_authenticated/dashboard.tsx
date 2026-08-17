@@ -234,9 +234,16 @@ function Dashboard() {
               </div>
 
               <div className="panel overflow-x-auto">
+                {canReorder && (
+                  <p className="border-b border-border px-4 py-2.5 text-xs text-muted-foreground">
+                    You're an admin — use the arrows to shuffle ware names into the order you want.
+                    The order is saved for everyone.
+                  </p>
+                )}
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      {canReorder && <TableHead className="w-16">Order</TableHead>}
                       <TableHead className="min-w-56">Product (Ware)</TableHead>
                       <TableHead>Code</TableHead>
                       <TableHead className="min-w-36">Dimension in Catalogue</TableHead>
@@ -249,8 +256,34 @@ function Dashboard() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {active.wares.map((w) => (
+                    {wares.map((w, i) => (
                       <TableRow key={w.id}>
+                        {canReorder && (
+                          <TableCell>
+                            <div className="flex flex-col">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="size-6"
+                                aria-label={`Move ${w.ware} up`}
+                                disabled={i === 0 || reorder.isPending}
+                                onClick={() => move(i, -1)}
+                              >
+                                <ChevronUp className="size-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="size-6"
+                                aria-label={`Move ${w.ware} down`}
+                                disabled={i === wares.length - 1 || reorder.isPending}
+                                onClick={() => move(i, 1)}
+                              >
+                                <ChevronDown className="size-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        )}
                         <TableCell className="font-medium">{w.ware}</TableCell>
                         <TableCell className="num text-muted-foreground">{w.code ?? "—"}</TableCell>
                         <TableCell className="num">{w.dimensionsCatalogue ?? "—"}</TableCell>
@@ -275,9 +308,9 @@ function Dashboard() {
                         </TableCell>
                       </TableRow>
                     ))}
-                    {!active.wares.length && (
+                    {!wares.length && (
                       <TableRow>
-                        <TableCell colSpan={9} className="text-sm text-muted-foreground">
+                        <TableCell colSpan={canReorder ? 10 : 9} className="text-sm text-muted-foreground">
                           No wares synced for this collection yet.
                         </TableCell>
                       </TableRow>
@@ -285,6 +318,7 @@ function Dashboard() {
                   </TableBody>
                 </Table>
               </div>
+
             </div>
           </div>
         )
