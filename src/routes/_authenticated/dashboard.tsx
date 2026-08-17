@@ -236,8 +236,8 @@ function Dashboard() {
               <div className="panel overflow-x-auto">
                 {canReorder && (
                   <p className="border-b border-border px-4 py-2.5 text-xs text-muted-foreground">
-                    You're an admin — use the arrows to shuffle ware names into the order you want.
-                    The order is saved for everyone.
+                    You're an admin — shuffle ware names with the arrows, edit any field with the
+                    pencil, or delete a ware. Changes are saved for everyone.
                   </p>
                 )}
                 <Table>
@@ -253,6 +253,7 @@ function Dashboard() {
                       <TableHead>Final Printed Image</TableHead>
                       <TableHead className="text-right">Approx Weight (gm)</TableHead>
                       <TableHead className="text-right">Stock</TableHead>
+                      {canReorder && <TableHead className="w-24">Actions</TableHead>}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -306,15 +307,21 @@ function Dashboard() {
                             {num(w.stockInHand)}
                           </span>
                         </TableCell>
+                        {canReorder && (
+                          <TableCell>
+                            <WareRowActions ware={w} />
+                          </TableCell>
+                        )}
                       </TableRow>
                     ))}
                     {!wares.length && (
                       <TableRow>
-                        <TableCell colSpan={canReorder ? 10 : 9} className="text-sm text-muted-foreground">
+                        <TableCell colSpan={canReorder ? 11 : 9} className="text-sm text-muted-foreground">
                           No wares synced for this collection yet.
                         </TableCell>
                       </TableRow>
                     )}
+
                   </TableBody>
                 </Table>
               </div>
