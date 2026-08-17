@@ -301,6 +301,7 @@ export type Database = {
           printed_image_url: string | null
           product_name: string | null
           shopify_product_id: string | null
+          sort_order: number | null
           unit: string
         }
         Insert: {
@@ -317,6 +318,7 @@ export type Database = {
           printed_image_url?: string | null
           product_name?: string | null
           shopify_product_id?: string | null
+          sort_order?: number | null
           unit?: string
         }
         Update: {
@@ -333,6 +335,7 @@ export type Database = {
           printed_image_url?: string | null
           product_name?: string | null
           shopify_product_id?: string | null
+          sort_order?: number | null
           unit?: string
         }
         Relationships: [
