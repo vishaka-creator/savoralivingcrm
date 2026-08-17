@@ -432,6 +432,82 @@ export const reorderWares = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+const nullableText = (max: number) =>
+  z.string().trim().max(max).nullable().optional().transform((v) => (v ? v : null));
+
+export const updateWare = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) =>
+    z
+      .object({
+        id: z.string().uuid(),
+        name: z.string().trim().min(1).max(200),
+        code: nullableText(80),
+        dimensions_catalogue: nullableText(200),
+        product_name: nullableText(200),
+        image_url: nullableText(600),
+        printed_image_url: nullableText(600),
+        ordered_quantity: z.number().min(0).max(1000000).nullable().optional(),
+        approx_weight_grams: z.number().min(0).max(1000000).nullable().optional(),
+        stock_in_hand: z.number().min(0).max(1000000).optional(),
+      })
+      .parse(d),
+  )
+  .handler(async ({ context, data }) => {
+    await assertAdmin(context);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { id, stock_in_hand, ...fields } = data;
+    const { error } = await supabaseAdmin
+      .from("skus")
+      .update({
+        name: fields.name,
+        code: fields.code ?? null,
+        dimensions_catalogue: fields.dimensions_catalogue ?? null,
+        product_name: fields.product_name ?? null,
+        image_url: fields.image_url ?? null,
+        printed_image_url: fields.printed_image_url ?? null,
+        ordered_quantity: fields.ordered_quantity ?? null,
+        approx_weight_grams: fields.approx_weight_grams ?? null,
+      })
+      .eq("id", id);
+    if (error) throw new Error(error.message);
+
+    if (typeof stock_in_hand === "number") {
+      const { error: stockError } = await supabaseAdmin
+        .from("raw_materials")
+        .update({ quantity_on_hand: stock_in_hand })
+        .eq("sku_id", id);
+      if (stockError) throw new Error(stockError.message);
+    }
+
+    await supabaseAdmin.from("activity_log").insert({
+      actor: context.userId,
+      actor_email: context.claims?.email ?? null,
+      action: "ware.update",
+      detail: `Updated ware ${data.name}`,
+    });
+    return { ok: true };
+  });
+
+export const deleteWare = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ context, data }) => {
+    await assertAdmin(context);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    await supabaseAdmin.from("raw_materials").delete().eq("sku_id", data.id);
+    const { error } = await supabaseAdmin.from("skus").delete().eq("id", data.id);
+    if (error) throw new Error(error.message);
+    await supabaseAdmin.from("activity_log").insert({
+      actor: context.userId,
+      actor_email: context.claims?.email ?? null,
+      action: "ware.delete",
+      detail: `Deleted ware ${data.id}`,
+    });
+    return { ok: true };
+  });
+
+
 /* ---------------------------------- sync -------------------------------- */
 
 
