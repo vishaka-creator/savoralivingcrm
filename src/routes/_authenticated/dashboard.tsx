@@ -235,98 +235,13 @@ function Dashboard() {
                 </div>
               </div>
 
-              <div className="panel overflow-x-auto">
-                {canReorder && (
-                  <p className="border-b border-border px-4 py-2.5 text-xs text-muted-foreground">
-                    You're an admin — shuffle ware names with the arrows, edit any field with the
-                    pencil, or delete a ware. Changes are saved for everyone.
-                  </p>
-                )}
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      {canReorder && <TableHead className="w-16">Order</TableHead>}
-                      <TableHead className="min-w-56">Product (Ware)</TableHead>
-                      <TableHead>Code</TableHead>
-                      <TableHead className="min-w-36">Dimension in Catalogue</TableHead>
-                      <TableHead className="min-w-40">Product Name</TableHead>
-                      <TableHead>Images</TableHead>
-                      <TableHead className="text-right">Orderd Quantity</TableHead>
-                      <TableHead>Final Printed Image</TableHead>
-                      <TableHead className="text-right">Approx Weight (gm)</TableHead>
-                      <TableHead className="text-right">Stock</TableHead>
-                      {canReorder && <TableHead className="w-24">Actions</TableHead>}
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {wares.map((w, i) => (
-                      <TableRow key={w.id}>
-                        {canReorder && (
-                          <TableCell>
-                            <div className="flex flex-col">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="size-6"
-                                aria-label={`Move ${w.ware} up`}
-                                disabled={i === 0 || reorder.isPending}
-                                onClick={() => move(i, -1)}
-                              >
-                                <ChevronUp className="size-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="size-6"
-                                aria-label={`Move ${w.ware} down`}
-                                disabled={i === wares.length - 1 || reorder.isPending}
-                                onClick={() => move(i, 1)}
-                              >
-                                <ChevronDown className="size-4" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        )}
-                        <TableCell className="font-medium">{w.ware}</TableCell>
-                        <TableCell className="num text-muted-foreground">{w.code ?? "—"}</TableCell>
-                        <TableCell className="num">{w.dimensionsCatalogue ?? "—"}</TableCell>
-                        <TableCell>{w.productName ?? "—"}</TableCell>
-                        <TableCell>
-                          <Thumb url={w.imageUrl} alt={`${w.ware} reference image`} />
-                        </TableCell>
-                        <TableCell className="num text-right">{num(w.orderedQuantity)}</TableCell>
-                        <TableCell>
-                          <Thumb url={w.printedImageUrl} alt={`${w.ware} final printed image`} />
-                        </TableCell>
-                        <TableCell className="num text-right">
-                          {w.approxWeight === null ? "—" : num(w.approxWeight)}
-                        </TableCell>
-                        <TableCell className="num text-right">
-                          <span className="inline-flex items-center gap-1.5">
-                            {w.stockInHand <= w.threshold && (
-                              <AlertTriangle className="size-3.5 text-warning" />
-                            )}
-                            {num(w.stockInHand)}
-                          </span>
-                        </TableCell>
-                        {canReorder && (
-                          <TableCell>
-                            <WareRowActions ware={w} />
-                          </TableCell>
-                        )}
-                      </TableRow>
-                    ))}
-                    {!wares.length && (
-                      <TableRow>
-                        <TableCell colSpan={canReorder ? 11 : 9} className="text-sm text-muted-foreground">
-                          No wares synced for this collection yet.
-                        </TableCell>
-                      </TableRow>
-                    )}
+              <WareTable
+                wares={wares}
+                canEdit={canReorder}
+                onMove={move}
+                isReordering={reorder.isPending}
+              />
 
-                  </TableBody>
-                </Table>
-              </div>
 
             </div>
           </div>
