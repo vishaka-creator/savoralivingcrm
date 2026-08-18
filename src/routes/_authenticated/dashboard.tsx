@@ -14,6 +14,8 @@ import {
 import { toast } from "sonner";
 
 import { AppShell, useMe } from "@/components/savora/AppShell";
+import { WareRowActions } from "@/components/savora/WareRowActions";
+
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
