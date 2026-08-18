@@ -492,6 +492,75 @@ export const updateWare = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+/* ---------------------------- sales in sets/pcs -------------------------- */
+
+export const updateWareSales = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) =>
+    z
+      .object({
+        id: z.string().uuid(),
+        sold_sets: z.number().min(0).max(1000000),
+        sold_pcs: z.number().min(0).max(1000000),
+        pieces_per_set: z.number().min(1).max(1000).optional(),
+      })
+      .parse(d),
+  )
+  .handler(async ({ context, data }) => {
+    await assertAdmin(context);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    const { data: sku, error: skuError } = await supabaseAdmin
+      .from("skus")
+      .select("id, name, pieces_per_set, sold_sets, sold_pcs")
+      .eq("id", data.id)
+      .maybeSingle();
+    if (skuError) throw new Error(skuError.message);
+    if (!sku) throw new Error("Ware not found");
+
+    const oldPps = Number(sku.pieces_per_set ?? 2);
+    const newPps = data.pieces_per_set ?? oldPps;
+    const oldPieces = Number(sku.sold_sets ?? 0) * oldPps + Number(sku.sold_pcs ?? 0);
+    const newPieces = data.sold_sets * newPps + data.sold_pcs;
+    const delta = newPieces - oldPieces;
+
+    const { error: updateError } = await supabaseAdmin
+      .from("skus")
+      .update({ sold_sets: data.sold_sets, sold_pcs: data.sold_pcs, pieces_per_set: newPps })
+      .eq("id", data.id);
+    if (updateError) throw new Error(updateError.message);
+
+    let stock: number | null = null;
+    if (delta !== 0) {
+      const { data: material } = await supabaseAdmin
+        .from("raw_materials")
+        .select("id, quantity_on_hand")
+        .eq("sku_id", data.id)
+        .maybeSingle();
+      if (material) {
+        stock = Math.max(0, Number(material.quantity_on_hand ?? 0) - delta);
+        const { error: stockError } = await supabaseAdmin
+          .from("raw_materials")
+          .update({ quantity_on_hand: stock })
+          .eq("id", material.id);
+        if (stockError) throw new Error(stockError.message);
+      }
+    }
+
+    await supabaseAdmin.from("activity_log").insert({
+      actor: context.userId,
+      actor_email: context.claims?.email ?? null,
+      action: "ware.sales",
+      detail: `${sku.name}: ${data.sold_sets} set(s) × ${newPps} + ${data.sold_pcs} pcs sold · stock ${
+        delta > 0 ? "-" : "+"
+      }${Math.abs(delta)}`,
+    });
+
+    return { ok: true, stockInHand: stock, piecesDelta: delta };
+  });
+
+
+
 export const deleteWare = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ id: z.string().uuid() }).parse(d))
