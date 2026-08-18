@@ -1,0 +1,4 @@
+ALTER TABLE public.skus
+  ADD COLUMN IF NOT EXISTS pieces_per_set numeric NOT NULL DEFAULT 2,
+  ADD COLUMN IF NOT EXISTS sold_sets numeric NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS sold_pcs numeric NOT NULL DEFAULT 0;
