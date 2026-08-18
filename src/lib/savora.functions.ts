@@ -108,6 +108,9 @@ export const getDashboard = createServerFn({ method: "GET" })
             imageUrl: s.image_url,
             printedImageUrl: s.printed_image_url,
             orderedQuantity: s.ordered_quantity === null ? null : Number(s.ordered_quantity),
+            piecesPerSet: Number(s.pieces_per_set ?? 2),
+            soldSets: Number(s.sold_sets ?? 0),
+            soldPcs: Number(s.sold_pcs ?? 0),
             stockInHand: Number(m?.quantity_on_hand ?? 0),
             threshold: Number(m?.low_stock_threshold ?? 20),
           };
