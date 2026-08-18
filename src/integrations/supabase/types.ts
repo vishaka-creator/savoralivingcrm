@@ -298,9 +298,12 @@ export type Database = {
           image_url: string | null
           name: string
           ordered_quantity: number | null
+          pieces_per_set: number
           printed_image_url: string | null
           product_name: string | null
           shopify_product_id: string | null
+          sold_pcs: number
+          sold_sets: number
           sort_order: number | null
           unit: string
         }
@@ -315,9 +318,12 @@ export type Database = {
           image_url?: string | null
           name: string
           ordered_quantity?: number | null
+          pieces_per_set?: number
           printed_image_url?: string | null
           product_name?: string | null
           shopify_product_id?: string | null
+          sold_pcs?: number
+          sold_sets?: number
           sort_order?: number | null
           unit?: string
         }
@@ -332,9 +338,12 @@ export type Database = {
           image_url?: string | null
           name?: string
           ordered_quantity?: number | null
+          pieces_per_set?: number
           printed_image_url?: string | null
           product_name?: string | null
           shopify_product_id?: string | null
+          sold_pcs?: number
+          sold_sets?: number
           sort_order?: number | null
           unit?: string
         }
