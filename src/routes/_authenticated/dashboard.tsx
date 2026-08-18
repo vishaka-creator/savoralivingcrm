@@ -6,27 +6,17 @@ import {
   AlertTriangle,
   ArrowRight,
   Boxes,
-  ChevronDown,
-  ChevronUp,
   PackageCheck,
   TrendingUp,
 } from "lucide-react";
 import { toast } from "sonner";
 
 import { AppShell, useMe } from "@/components/savora/AppShell";
-import { WareRowActions } from "@/components/savora/WareRowActions";
+import { WareTable } from "@/components/savora/WareTable";
 
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+
 
 import { getDashboard, reorderWares } from "@/lib/savora.functions";
 import { inr, num, trend } from "@/lib/format";
