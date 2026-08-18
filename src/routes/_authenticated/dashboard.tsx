@@ -241,21 +241,6 @@ function Dashboard() {
   );
 }
 
-function Thumb({ url, alt }: { url: string | null; alt: string }) {
-  if (!url || !/^https?:\/\//.test(url)) {
-    return <span className="text-muted-foreground">—</span>;
-  }
-  return (
-    <a href={url} target="_blank" rel="noreferrer" className="block">
-      <img
-        src={url}
-        alt={alt}
-        loading="lazy"
-        className="size-10 rounded border border-border object-cover"
-      />
-    </a>
-  );
-}
 
 function Stat({
   label,
