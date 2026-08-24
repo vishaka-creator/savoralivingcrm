@@ -103,7 +103,7 @@ function Dashboard() {
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="label-caps">Overview</p>
-          <h1 className="mt-1 text-3xl">Stock, kitting &amp; sales</h1>
+          <h1 className="mt-1 text-3xl">Stock, Inventory &amp; sales</h1>
         </div>
         {data && (
           <p className="max-w-sm text-sm text-muted-foreground">
