@@ -117,17 +117,35 @@ export function WareTable({
     setColumns(loadOrder());
   }, []);
 
-  const shift = (index: number, direction: -1 | 1) => {
-    const target = index + direction;
-    if (target < 0 || target >= columns.length) return;
-    const next = [...columns];
-    [next[index], next[target]] = [next[target]!, next[index]!];
+  const [dragKey, setDragKey] = useState<ColumnKey | null>(null);
+  const [overKey, setOverKey] = useState<ColumnKey | null>(null);
+
+  const persist = (next: ColumnKey[]) => {
     setColumns(next);
     try {
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
     } catch {
       /* ignore storage failures */
     }
+  };
+
+  const shift = (index: number, direction: -1 | 1) => {
+    const target = index + direction;
+    if (target < 0 || target >= columns.length) return;
+    const next = [...columns];
+    [next[index], next[target]] = [next[target]!, next[index]!];
+    persist(next);
+  };
+
+  const dropOn = (target: ColumnKey) => {
+    if (!dragKey || dragKey === target) return;
+    const next = columns.filter((k) => k !== dragKey);
+    next.splice(next.indexOf(target), 0, dragKey);
+    persist(next);
+  };
+
+  const moveByKeyboard = (key: ColumnKey, direction: -1 | 1) => {
+    shift(columns.indexOf(key), direction);
   };
 
   const resetColumns = () => {
