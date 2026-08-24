@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { AlertTriangle, ChevronDown, ChevronLeft, ChevronRight, ChevronUp } from "lucide-react";
+import { AlertTriangle, ChevronDown, ChevronUp, GripVertical } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -117,17 +117,35 @@ export function WareTable({
     setColumns(loadOrder());
   }, []);
 
-  const shift = (index: number, direction: -1 | 1) => {
-    const target = index + direction;
-    if (target < 0 || target >= columns.length) return;
-    const next = [...columns];
-    [next[index], next[target]] = [next[target]!, next[index]!];
+  const [dragKey, setDragKey] = useState<ColumnKey | null>(null);
+  const [overKey, setOverKey] = useState<ColumnKey | null>(null);
+
+  const persist = (next: ColumnKey[]) => {
     setColumns(next);
     try {
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
     } catch {
       /* ignore storage failures */
     }
+  };
+
+  const shift = (index: number, direction: -1 | 1) => {
+    const target = index + direction;
+    if (target < 0 || target >= columns.length) return;
+    const next = [...columns];
+    [next[index], next[target]] = [next[target]!, next[index]!];
+    persist(next);
+  };
+
+  const dropOn = (target: ColumnKey) => {
+    if (!dragKey || dragKey === target) return;
+    const next = columns.filter((k) => k !== dragKey);
+    next.splice(next.indexOf(target), 0, dragKey);
+    persist(next);
+  };
+
+  const moveByKeyboard = (key: ColumnKey, direction: -1 | 1) => {
+    shift(columns.indexOf(key), direction);
   };
 
   const resetColumns = () => {
@@ -148,8 +166,8 @@ export function WareTable({
     <div className="panel overflow-x-auto">
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-4 py-2.5">
         <p className="text-xs text-muted-foreground">
-          Use the arrows in each column header to shift columns into your preferred order — it is
-          remembered on this device.
+          Drag a column header onto another to reorder columns (or focus a header and press the
+          arrow keys) — the order is remembered on this device.
           {canEdit
             ? " Sales in sets and pieces are editable; saving reduces the stock in hand automatically."
             : ""}
@@ -165,41 +183,57 @@ export function WareTable({
         <TableHeader>
           <TableRow>
             {canEdit && <TableHead className="w-16">Order</TableHead>}
-            {columns.map((key, i) => (
+            {columns.map((key) => (
               <TableHead
                 key={key}
-                className={`${NUMERIC.includes(key) ? "text-right" : ""} ${
-                  key === "ware" ? "min-w-56" : "min-w-32"
-                }`}
+                draggable
+                onDragStart={(e) => {
+                  setDragKey(key);
+                  e.dataTransfer.effectAllowed = "move";
+                  e.dataTransfer.setData("text/plain", key);
+                }}
+                onDragOver={(e) => {
+                  if (!dragKey || dragKey === key) return;
+                  e.preventDefault();
+                  e.dataTransfer.dropEffect = "move";
+                  setOverKey(key);
+                }}
+                onDragLeave={() => setOverKey((k) => (k === key ? null : k))}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  dropOn(key);
+                  setDragKey(null);
+                  setOverKey(null);
+                }}
+                onDragEnd={() => {
+                  setDragKey(null);
+                  setOverKey(null);
+                }}
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === "ArrowLeft") {
+                    e.preventDefault();
+                    moveByKeyboard(key, -1);
+                  } else if (e.key === "ArrowRight") {
+                    e.preventDefault();
+                    moveByKeyboard(key, 1);
+                  }
+                }}
+                aria-grabbed={dragKey === key || undefined}
+                title="Drag to reorder"
+                className={`cursor-grab select-none transition-colors active:cursor-grabbing ${
+                  NUMERIC.includes(key) ? "text-right" : ""
+                } ${key === "ware" ? "min-w-56" : "min-w-32"} ${
+                  dragKey === key ? "opacity-50" : ""
+                } ${overKey === key ? "bg-primary/10 ring-1 ring-inset ring-primary/40" : ""}`}
               >
                 <div
-                  className={`flex items-center gap-1 ${
+                  className={`flex items-center gap-1.5 ${
                     NUMERIC.includes(key) ? "justify-end" : ""
                   }`}
                 >
+                  <GripVertical className="size-3.5 shrink-0 text-muted-foreground" />
                   <span>{COLUMN_LABELS[key]}</span>
-                  <span className="flex shrink-0">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="size-5"
-                      aria-label={`Move ${COLUMN_LABELS[key]} column left`}
-                      disabled={i === 0}
-                      onClick={() => shift(i, -1)}
-                    >
-                      <ChevronLeft className="size-3.5" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="size-5"
-                      aria-label={`Move ${COLUMN_LABELS[key]} column right`}
-                      disabled={i === columns.length - 1}
-                      onClick={() => shift(i, 1)}
-                    >
-                      <ChevronRight className="size-3.5" />
-                    </Button>
-                  </span>
                 </div>
               </TableHead>
             ))}
