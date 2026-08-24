@@ -183,41 +183,57 @@ export function WareTable({
         <TableHeader>
           <TableRow>
             {canEdit && <TableHead className="w-16">Order</TableHead>}
-            {columns.map((key, i) => (
+            {columns.map((key) => (
               <TableHead
                 key={key}
-                className={`${NUMERIC.includes(key) ? "text-right" : ""} ${
-                  key === "ware" ? "min-w-56" : "min-w-32"
-                }`}
+                draggable
+                onDragStart={(e) => {
+                  setDragKey(key);
+                  e.dataTransfer.effectAllowed = "move";
+                  e.dataTransfer.setData("text/plain", key);
+                }}
+                onDragOver={(e) => {
+                  if (!dragKey || dragKey === key) return;
+                  e.preventDefault();
+                  e.dataTransfer.dropEffect = "move";
+                  setOverKey(key);
+                }}
+                onDragLeave={() => setOverKey((k) => (k === key ? null : k))}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  dropOn(key);
+                  setDragKey(null);
+                  setOverKey(null);
+                }}
+                onDragEnd={() => {
+                  setDragKey(null);
+                  setOverKey(null);
+                }}
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === "ArrowLeft") {
+                    e.preventDefault();
+                    moveByKeyboard(key, -1);
+                  } else if (e.key === "ArrowRight") {
+                    e.preventDefault();
+                    moveByKeyboard(key, 1);
+                  }
+                }}
+                aria-grabbed={dragKey === key || undefined}
+                title="Drag to reorder"
+                className={`cursor-grab select-none transition-colors active:cursor-grabbing ${
+                  NUMERIC.includes(key) ? "text-right" : ""
+                } ${key === "ware" ? "min-w-56" : "min-w-32"} ${
+                  dragKey === key ? "opacity-50" : ""
+                } ${overKey === key ? "bg-primary/10 ring-1 ring-inset ring-primary/40" : ""}`}
               >
                 <div
-                  className={`flex items-center gap-1 ${
+                  className={`flex items-center gap-1.5 ${
                     NUMERIC.includes(key) ? "justify-end" : ""
                   }`}
                 >
+                  <GripVertical className="size-3.5 shrink-0 text-muted-foreground" />
                   <span>{COLUMN_LABELS[key]}</span>
-                  <span className="flex shrink-0">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="size-5"
-                      aria-label={`Move ${COLUMN_LABELS[key]} column left`}
-                      disabled={i === 0}
-                      onClick={() => shift(i, -1)}
-                    >
-                      <ChevronLeft className="size-3.5" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="size-5"
-                      aria-label={`Move ${COLUMN_LABELS[key]} column right`}
-                      disabled={i === columns.length - 1}
-                      onClick={() => shift(i, 1)}
-                    >
-                      <ChevronRight className="size-3.5" />
-                    </Button>
-                  </span>
                 </div>
               </TableHead>
             ))}
