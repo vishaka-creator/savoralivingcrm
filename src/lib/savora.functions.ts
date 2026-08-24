@@ -108,7 +108,7 @@ export const getDashboard = createServerFn({ method: "GET" })
             imageUrl: s.image_url,
             printedImageUrl: s.printed_image_url,
             orderedQuantity: s.ordered_quantity === null ? null : Number(s.ordered_quantity),
-            piecesPerSet: Number(s.pieces_per_set ?? 2),
+            piecesPerSet: Number(s.pieces_per_set ?? 4),
             soldSets: Number(s.sold_sets ?? 0),
             soldPcs: Number(s.sold_pcs ?? 0),
             stockInHand: Number(m?.quantity_on_hand ?? 0),
@@ -518,7 +518,7 @@ export const updateWareSales = createServerFn({ method: "POST" })
     if (skuError) throw new Error(skuError.message);
     if (!sku) throw new Error("Ware not found");
 
-    const oldPps = Number(sku.pieces_per_set ?? 2);
+    const oldPps = Number(sku.pieces_per_set ?? 4);
     const newPps = data.pieces_per_set ?? oldPps;
     const oldPieces = Number(sku.sold_sets ?? 0) * oldPps + Number(sku.sold_pcs ?? 0);
     const newPieces = data.sold_sets * newPps + data.sold_pcs;
