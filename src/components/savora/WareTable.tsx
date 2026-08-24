@@ -166,8 +166,8 @@ export function WareTable({
     <div className="panel overflow-x-auto">
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-4 py-2.5">
         <p className="text-xs text-muted-foreground">
-          Use the arrows in each column header to shift columns into your preferred order — it is
-          remembered on this device.
+          Drag a column header onto another to reorder columns (or focus a header and press the
+          arrow keys) — the order is remembered on this device.
           {canEdit
             ? " Sales in sets and pieces are editable; saving reduces the stock in hand automatically."
             : ""}
