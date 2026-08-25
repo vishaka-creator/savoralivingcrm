@@ -273,43 +273,95 @@ export function WareTable({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {wares.map((w, i) => (
-            <TableRow key={w.id}>
-              {canEdit && (
-                <TableCell>
-                  <div className="flex flex-col">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="size-6"
-                      aria-label={`Move ${w.ware} up`}
-                      disabled={i === 0 || isReordering}
-                      onClick={() => onMove(i, -1)}
-                    >
-                      <ChevronUp className="size-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="size-6"
-                      aria-label={`Move ${w.ware} down`}
-                      disabled={i === wares.length - 1 || isReordering}
-                      onClick={() => onMove(i, 1)}
-                    >
-                      <ChevronDown className="size-4" />
-                    </Button>
-                  </div>
+          {groups.map((group) => (
+            <Fragment key={group.key}>
+              <TableRow className="hover:bg-transparent">
+                <TableCell
+                  colSpan={columns.length + (canEdit ? 2 : 0)}
+                  className="bg-muted/50 py-2"
+                >
+                  <span className="label-caps">{group.title}</span>
+                  <span className="num ml-2 text-xs text-muted-foreground">
+                    {num(group.rows.length)}
+                  </span>
                 </TableCell>
-              )}
-              {columns.map((key) => (
-                <Cell key={key} column={key} ware={w} canEdit={canEdit} />
-              ))}
-              {canEdit && (
-                <TableCell>
-                  <WareRowActions ware={w} />
-                </TableCell>
-              )}
-            </TableRow>
+              </TableRow>
+              {group.rows.map((w) => {
+                const i = wares.findIndex((x) => x.id === w.id);
+                return (
+                  <TableRow
+                    key={w.id}
+                    draggable={canEdit && !!onReorder}
+                    onDragStart={(e) => {
+                      setDragRow(w.id);
+                      e.dataTransfer.effectAllowed = "move";
+                      e.dataTransfer.setData("text/plain", w.id);
+                    }}
+                    onDragOver={(e) => {
+                      if (!dragRow || dragRow === w.id) return;
+                      e.preventDefault();
+                      e.dataTransfer.dropEffect = "move";
+                      setOverRow(w.id);
+                    }}
+                    onDragLeave={() => setOverRow((k) => (k === w.id ? null : k))}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      dropRowOn(w.id);
+                      setDragRow(null);
+                      setOverRow(null);
+                    }}
+                    onDragEnd={() => {
+                      setDragRow(null);
+                      setOverRow(null);
+                    }}
+                    className={`${dragRow === w.id ? "opacity-50" : ""} ${
+                      overRow === w.id ? "bg-primary/10" : ""
+                    }`}
+                  >
+                    {canEdit && (
+                      <TableCell>
+                        <div className="flex items-center gap-1">
+                          <GripVertical
+                            className="size-3.5 shrink-0 cursor-grab text-muted-foreground active:cursor-grabbing"
+                            aria-hidden
+                          />
+                          <div className="flex flex-col">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="size-6"
+                              aria-label={`Move ${w.ware} up`}
+                              disabled={i === 0 || isReordering}
+                              onClick={() => onMove(i, -1)}
+                            >
+                              <ChevronUp className="size-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="size-6"
+                              aria-label={`Move ${w.ware} down`}
+                              disabled={i === wares.length - 1 || isReordering}
+                              onClick={() => onMove(i, 1)}
+                            >
+                              <ChevronDown className="size-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      </TableCell>
+                    )}
+                    {columns.map((key) => (
+                      <Cell key={key} column={key} ware={w} canEdit={canEdit} />
+                    ))}
+                    {canEdit && (
+                      <TableCell>
+                        <WareRowActions ware={w} />
+                      </TableCell>
+                    )}
+                  </TableRow>
+                );
+              })}
+            </Fragment>
           ))}
           {!wares.length && (
             <TableRow>
