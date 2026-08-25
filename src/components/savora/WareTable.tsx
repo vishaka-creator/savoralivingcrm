@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { AlertTriangle, ChevronDown, ChevronUp, GripVertical } from "lucide-react";
@@ -143,6 +143,8 @@ export function WareTable({
     onReorder(ids);
   };
 
+  const groups = useMemo(() => groupWares(wares), [wares]);
+
   const [columns, setColumns] = useState<ColumnKey[]>(DEFAULT_ORDER);
 
   useEffect(() => {
@@ -201,7 +203,7 @@ export function WareTable({
           Drag a column header onto another to reorder columns (or focus a header and press the
           arrow keys) — the order is remembered on this device.
           {canEdit
-            ? " Sales in sets and pieces are editable; saving reduces the stock in hand automatically."
+            ? " Rows can be dragged onto each other to reorder wares. Sales in sets and pieces are editable; saving reduces the stock in hand automatically."
             : ""}
         </p>
         {isCustom && (
