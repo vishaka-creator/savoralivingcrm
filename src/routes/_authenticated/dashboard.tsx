@@ -95,6 +95,12 @@ function Dashboard() {
     reorder.mutate({ slug: active.slug, ids });
   };
 
+  const applyOrder = (ids: string[]) => {
+    if (!active) return;
+    setOrder(ids);
+    reorder.mutate({ slug: active.slug, ids });
+  };
+
   const delta = data && trend(data.totals.salesThisMonth, data.totals.salesLastMonth);
 
 
@@ -229,6 +235,7 @@ function Dashboard() {
                 wares={wares}
                 canEdit={canReorder}
                 onMove={move}
+                onReorder={applyOrder}
                 isReordering={reorder.isPending}
               />
 
