@@ -100,17 +100,49 @@ function loadOrder(): ColumnKey[] {
   }
 }
 
+const COMBO_RE = /\bmini|combo|special/i;
+
+function groupWares(wares: WareTableRow[]) {
+  const main: WareTableRow[] = [];
+  const combos: WareTableRow[] = [];
+  for (const w of wares) {
+    const label = `${w.ware} ${w.productName ?? ""}`;
+    (COMBO_RE.test(label) ? combos : main).push(w);
+  }
+  const groups: { key: string; title: string; rows: WareTableRow[] }[] = [];
+  if (main.length) groups.push({ key: "main", title: "Wares", rows: main });
+  if (combos.length)
+    groups.push({ key: "combos", title: "Minis & special combos", rows: combos });
+  return groups;
+}
+
 export function WareTable({
   wares,
   canEdit,
   onMove,
+  onReorder,
   isReordering,
 }: {
   wares: WareTableRow[];
   canEdit: boolean;
   onMove: (index: number, direction: -1 | 1) => void;
+  onReorder?: (ids: string[]) => void;
   isReordering: boolean;
 }) {
+  const [dragRow, setDragRow] = useState<string | null>(null);
+  const [overRow, setOverRow] = useState<string | null>(null);
+
+  const dropRowOn = (targetId: string) => {
+    if (!dragRow || dragRow === targetId || !onReorder) return;
+    const ids = wares.map((w) => w.id);
+    const from = ids.indexOf(dragRow);
+    const to = ids.indexOf(targetId);
+    if (from < 0 || to < 0) return;
+    ids.splice(from, 1);
+    ids.splice(to, 0, dragRow);
+    onReorder(ids);
+  };
+
   const [columns, setColumns] = useState<ColumnKey[]>(DEFAULT_ORDER);
 
   useEffect(() => {
