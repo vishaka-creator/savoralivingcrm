@@ -111,6 +111,8 @@ export const getDashboard = createServerFn({ method: "GET" })
             piecesPerSet: Number(s.pieces_per_set ?? 4),
             soldSets: Number(s.sold_sets ?? 0),
             soldPcs: Number(s.sold_pcs ?? 0),
+            influencerStock: null,
+            storeStock: null,
             stockInHand: Number(m?.quantity_on_hand ?? 0),
             threshold: Number(m?.low_stock_threshold ?? 20),
           };

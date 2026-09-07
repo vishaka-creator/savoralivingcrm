@@ -31,8 +31,8 @@ export interface WareTableRow {
   piecesPerSet: number;
   soldSets: number;
   soldPcs: number;
-  influencerStock: number;
-  storeStock: number;
+  influencerStock: number | null;
+  storeStock: number | null;
   stockInHand: number;
   threshold: number;
 }
