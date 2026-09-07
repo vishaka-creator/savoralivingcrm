@@ -6,19 +6,34 @@ import {
   AlertTriangle,
   ArrowRight,
   Boxes,
+  BarChart3,
+  Plus,
   PackageCheck,
   TrendingUp,
 } from "lucide-react";
+import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { toast } from "sonner";
 
 import { AppShell, useMe } from "@/components/savora/AppShell";
 import { WareTable } from "@/components/savora/WareTable";
 
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 
-import { getDashboard, reorderWares } from "@/lib/savora.functions";
+import { createCollection, getDashboard, reorderWares } from "@/lib/savora.functions";
 import { inr, num, trend } from "@/lib/format";
 
 
@@ -68,9 +83,11 @@ function Dashboard() {
   const queryClient = useQueryClient();
   const saveOrder = useServerFn(reorderWares);
   const [order, setOrder] = useState<string[] | null>(null);
+  const [showAll, setShowAll] = useState(false);
 
   useEffect(() => {
     setOrder(null);
+    setShowAll(false);
   }, [active?.slug]);
 
   const reorder = useMutation({
@@ -84,6 +101,7 @@ function Dashboard() {
   const wares = order
     ? (order.map((id) => baseWares.find((w) => w.id === id)).filter(Boolean) as typeof baseWares)
     : baseWares;
+  const visibleWares = showAll ? wares : wares.slice(0, 5);
 
   const move = (index: number, direction: -1 | 1) => {
     if (!active) return;
@@ -176,7 +194,11 @@ function Dashboard() {
         active && (
           <div className="mt-4 grid gap-6 lg:grid-cols-[240px_minmax(0,1fr)]">
             {/* Left: subject list */}
-            <nav className="panel h-fit p-2 lg:sticky lg:top-6">
+           <nav className="panel h-fit p-2 lg:sticky lg:top-6">
+             <div className="flex items-center justify-between border-b border-border px-2 pb-2">
+               <span className="label-caps">Collections</span>
+               {canReorder && <AddCollectionButton />}
+             </div>
               <ul className="space-y-1">
                 {cards.map((c) => {
                   const isActive = c.slug === active.slug;
@@ -231,13 +253,24 @@ function Dashboard() {
                 </div>
               </div>
 
-              <WareTable
-                wares={wares}
+               <SalesChart wares={wares} />
+
+               <WareTable
+                 wares={visibleWares}
                 canEdit={canReorder}
                 onMove={move}
                 onReorder={applyOrder}
                 isReordering={reorder.isPending}
               />
+               {wares.length > 5 && (
+                 <Button
+                   variant="outline"
+                   className="w-full"
+                   onClick={() => setShowAll((value) => !value)}
+                 >
+                   {showAll ? "Show only 5 items" : `Show all ${wares.length} items`}
+                 </Button>
+               )}
 
 
             </div>
@@ -245,6 +278,86 @@ function Dashboard() {
         )
       )}
     </AppShell>
+  );
+}
+
+function SalesChart({ wares }: { wares: Array<{ ware: string; soldSets: number; soldPcs: number; piecesPerSet: number }> }) {
+  const chartData = wares
+    .map((ware) => ({
+      name: ware.ware.length > 18 ? `${ware.ware.slice(0, 18)}…` : ware.ware,
+      sales: ware.soldSets * ware.piecesPerSet + ware.soldPcs,
+    }))
+    .sort((a, b) => b.sales - a.sales)
+    .slice(0, 5);
+
+  return (
+    <section className="panel p-5" aria-labelledby="product-sales-heading">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="label-caps">Top 5 products</p>
+          <h2 id="product-sales-heading" className="mt-1 text-xl">Product sales</h2>
+        </div>
+        <BarChart3 className="size-5 text-muted-foreground" />
+      </div>
+      {chartData.some((item) => item.sales > 0) ? (
+        <div className="mt-4 h-64 w-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={chartData} margin={{ top: 8, right: 8, left: -20, bottom: 8 }}>
+              <CartesianGrid stroke="var(--color-border)" vertical={false} />
+              <XAxis dataKey="name" tick={{ fill: "var(--color-muted-foreground)", fontSize: 11 }} axisLine={false} tickLine={false} />
+              <YAxis allowDecimals={false} tick={{ fill: "var(--color-muted-foreground)", fontSize: 11 }} axisLine={false} tickLine={false} />
+              <Tooltip cursor={{ fill: "var(--color-muted)" }} />
+              <Bar dataKey="sales" name="Pieces sold" fill="var(--color-primary)" radius={[3, 3, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      ) : (
+        <p className="mt-6 text-sm text-muted-foreground">Sales will appear here as products are recorded.</p>
+      )}
+    </section>
+  );
+}
+
+function AddCollectionButton() {
+  const [open, setOpen] = useState(false);
+  const [name, setName] = useState("");
+  const [sheetTab, setSheetTab] = useState("");
+  const queryClient = useQueryClient();
+  const add = useServerFn(createCollection);
+  const mutation = useMutation({
+    mutationFn: () => {
+      const slug = name.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+      return add({ data: { name: name.trim(), slug, sheet_tab: sheetTab.trim() || name.trim(), shopify_handle: null } });
+    },
+    onSuccess: () => {
+      toast.success("Collection added");
+      setName("");
+      setSheetTab("");
+      setOpen(false);
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="ghost" size="icon" className="size-7" aria-label="Add collection">
+          <Plus className="size-4" />
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Add collection</DialogTitle>
+          <DialogDescription>Add a new subject to the collection list. Wares can be synced into it later.</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div className="space-y-1.5"><Label htmlFor="collection-name">Collection name</Label><Input id="collection-name" value={name} onChange={(event) => setName(event.target.value)} placeholder="e.g. Coastal" /></div>
+          <div className="space-y-1.5"><Label htmlFor="collection-sheet">Sheet tab</Label><Input id="collection-sheet" value={sheetTab} onChange={(event) => setSheetTab(event.target.value)} placeholder="Optional" /></div>
+        </div>
+        <DialogFooter><Button onClick={() => mutation.mutate()} disabled={!name.trim() || mutation.isPending}>Add collection</Button></DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 

@@ -111,6 +111,8 @@ export const getDashboard = createServerFn({ method: "GET" })
             piecesPerSet: Number(s.pieces_per_set ?? 4),
             soldSets: Number(s.sold_sets ?? 0),
             soldPcs: Number(s.sold_pcs ?? 0),
+            influencerStock: null,
+            storeStock: null,
             stockInHand: Number(m?.quantity_on_hand ?? 0),
             threshold: Number(m?.low_stock_threshold ?? 20),
           };
@@ -137,6 +139,51 @@ export const getDashboard = createServerFn({ method: "GET" })
       },
       lastSync: sync.data?.[0] ?? null,
     };
+  });
+
+export const createCollection = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) =>
+    z
+      .object({
+        name: z.string().trim().min(1).max(120),
+        slug: z.string().trim().min(1).max(40).regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
+        sheet_tab: z.string().trim().min(1).max(120),
+        shopify_handle: z.string().trim().max(120).nullable().optional(),
+      })
+      .parse(d),
+  )
+  .handler(async ({ context, data }) => {
+    await assertAdmin(context);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: existing } = await supabaseAdmin
+      .from("collections")
+      .select("slug")
+      .eq("slug", data.slug)
+      .maybeSingle();
+    if (existing) throw new Error("A collection with this slug already exists");
+
+    const { data: last } = await supabaseAdmin
+      .from("collections")
+      .select("sort_order")
+      .order("sort_order", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    const { error } = await supabaseAdmin.from("collections").insert({
+      slug: data.slug,
+      name: data.name,
+      sheet_tab: data.sheet_tab,
+      shopify_handle: data.shopify_handle || null,
+      sort_order: Number(last?.sort_order ?? 0) + 1,
+    });
+    if (error) throw new Error(error.message);
+    await supabaseAdmin.from("activity_log").insert({
+      actor: context.userId,
+      actor_email: context.claims?.email ?? null,
+      action: "collection.create",
+      detail: `Created collection ${data.name}`,
+    });
+    return { ok: true };
   });
 
 export const getCollectionDetail = createServerFn({ method: "GET" })
