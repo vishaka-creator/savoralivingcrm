@@ -31,6 +31,8 @@ export interface WareTableRow {
   piecesPerSet: number;
   soldSets: number;
   soldPcs: number;
+  influencerStock: number;
+  storeStock: number;
   stockInHand: number;
   threshold: number;
 }
@@ -46,6 +48,8 @@ type ColumnKey =
   | "approxWeight"
   | "soldSets"
   | "soldPcs"
+  | "influencerStock"
+  | "storeStock"
   | "stock";
 
 const COLUMN_LABELS: Record<ColumnKey, string> = {
@@ -59,6 +63,8 @@ const COLUMN_LABELS: Record<ColumnKey, string> = {
   approxWeight: "Approx Weight (gm)",
   soldSets: "Sales — Sets",
   soldPcs: "Sales — Pcs",
+  influencerStock: "Influencer Stock",
+  storeStock: "Store Stock",
   stock: "Stock",
 };
 
@@ -73,6 +79,8 @@ const DEFAULT_ORDER: ColumnKey[] = [
   "approxWeight",
   "soldSets",
   "soldPcs",
+  "influencerStock",
+  "storeStock",
   "stock",
 ];
 
@@ -81,6 +89,8 @@ const NUMERIC: ColumnKey[] = [
   "approxWeight",
   "soldSets",
   "soldPcs",
+  "influencerStock",
+  "storeStock",
   "stock",
 ];
 
@@ -423,6 +433,10 @@ function Cell({
       return <SalesCell ware={ware} field="sets" canEdit={canEdit} />;
     case "soldPcs":
       return <SalesCell ware={ware} field="pcs" canEdit={canEdit} />;
+    case "influencerStock":
+      return <TableCell className="num text-right">{num(ware.influencerStock)}</TableCell>;
+    case "storeStock":
+      return <TableCell className="num text-right">{num(ware.storeStock)}</TableCell>;
     case "stock":
       return (
         <TableCell className="num text-right">
