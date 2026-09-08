@@ -41,6 +41,30 @@ export type Database = {
         }
         Relationships: []
       }
+      app_settings: {
+        Row: {
+          id: number
+          low_stock_pcs_threshold: number
+          low_stock_sets_threshold: number
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          id?: number
+          low_stock_pcs_threshold?: number
+          low_stock_sets_threshold?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          id?: number
+          low_stock_pcs_threshold?: number
+          low_stock_sets_threshold?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       bom: {
         Row: {
           box_code: string | null
@@ -126,8 +150,72 @@ export type Database = {
           },
         ]
       }
+      collection_costing: {
+        Row: {
+          box_cost: number
+          collection_slug: string
+          created_at: string
+          created_by: string | null
+          id: string
+          item_name: string
+          material_cost: number
+          notes: string | null
+          sku_id: string | null
+          sort_order: number
+          total_cost: number
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          box_cost?: number
+          collection_slug: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          item_name: string
+          material_cost?: number
+          notes?: string | null
+          sku_id?: string | null
+          sort_order?: number
+          total_cost?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          box_cost?: number
+          collection_slug?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          item_name?: string
+          material_cost?: number
+          notes?: string | null
+          sku_id?: string | null
+          sort_order?: number
+          total_cost?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "collection_costing_collection_slug_fkey"
+            columns: ["collection_slug"]
+            isOneToOne: false
+            referencedRelation: "collections"
+            referencedColumns: ["slug"]
+          },
+          {
+            foreignKeyName: "collection_costing_sku_id_fkey"
+            columns: ["sku_id"]
+            isOneToOne: false
+            referencedRelation: "skus"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       collections: {
         Row: {
+          cover_image: string | null
           name: string
           sheet_tab: string
           shopify_handle: string | null
@@ -135,6 +223,7 @@ export type Database = {
           sort_order: number
         }
         Insert: {
+          cover_image?: string | null
           name: string
           sheet_tab: string
           shopify_handle?: string | null
@@ -142,11 +231,102 @@ export type Database = {
           sort_order?: number
         }
         Update: {
+          cover_image?: string | null
           name?: string
           sheet_tab?: string
           shopify_handle?: string | null
           slug?: string
           sort_order?: number
+        }
+        Relationships: []
+      }
+      contacts: {
+        Row: {
+          company: string | null
+          created_at: string
+          created_by: string | null
+          email: string | null
+          id: string
+          name: string
+          phone: string | null
+          sort_order: number
+          type: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          company?: string | null
+          created_at?: string
+          created_by?: string | null
+          email?: string | null
+          id?: string
+          name: string
+          phone?: string | null
+          sort_order?: number
+          type?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          company?: string | null
+          created_at?: string
+          created_by?: string | null
+          email?: string | null
+          id?: string
+          name?: string
+          phone?: string | null
+          sort_order?: number
+          type?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
+      crm_events: {
+        Row: {
+          calendar_source: string
+          created_at: string
+          created_by: string | null
+          end_time: string | null
+          google_calendar_event_id: string | null
+          id: string
+          is_major: boolean
+          notes: string | null
+          start_time: string
+          title: string
+          type_tag: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          calendar_source?: string
+          created_at?: string
+          created_by?: string | null
+          end_time?: string | null
+          google_calendar_event_id?: string | null
+          id?: string
+          is_major?: boolean
+          notes?: string | null
+          start_time: string
+          title: string
+          type_tag?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          calendar_source?: string
+          created_at?: string
+          created_by?: string | null
+          end_time?: string | null
+          google_calendar_event_id?: string | null
+          id?: string
+          is_major?: boolean
+          notes?: string | null
+          start_time?: string
+          title?: string
+          type_tag?: string
+          updated_at?: string
+          updated_by?: string | null
         }
         Relationships: []
       }
@@ -350,6 +530,56 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "skus_collection_slug_fkey"
+            columns: ["collection_slug"]
+            isOneToOne: false
+            referencedRelation: "collections"
+            referencedColumns: ["slug"]
+          },
+        ]
+      }
+      special_combinations: {
+        Row: {
+          collection_slug: string
+          combo_name: string
+          combo_price: number
+          created_at: string
+          created_by: string | null
+          id: string
+          items_included: Json
+          notes: string | null
+          sort_order: number
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          collection_slug: string
+          combo_name: string
+          combo_price?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          items_included?: Json
+          notes?: string | null
+          sort_order?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          collection_slug?: string
+          combo_name?: string
+          combo_price?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          items_included?: Json
+          notes?: string | null
+          sort_order?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "special_combinations_collection_slug_fkey"
             columns: ["collection_slug"]
             isOneToOne: false
             referencedRelation: "collections"
