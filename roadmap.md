@@ -1,0 +1,7 @@
+- [ ] Refresh navigation and build Overview landing page with quarterly analytics, contacts snapshot, costing summary, and upcoming events.
+- [ ] Add Collections detail workspace for costing, special combinations, editable wares, and live set calculations.
+- [ ] Add Contacts module with editable B2B/B2C lists.
+- [ ] Add Calendar module with Google Calendar connection path and event management.
+- [ ] Align admin access model to Admin-only and expose thresholds/BOM/sync activity.
+- [ ] Add required Cloud tables/migrations and server functions for new editable records.
+- [ ] Validate routes, metadata, build, and live preview.
