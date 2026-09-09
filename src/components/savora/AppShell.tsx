@@ -1,7 +1,7 @@
 import { Link, useRouter } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { RefreshCw, LogOut, LayoutGrid, IndianRupee, ListChecks, Shield } from "lucide-react";
+import { RefreshCw, LogOut, LayoutGrid, Boxes, Users, CalendarDays, Shield } from "lucide-react";
 import { toast } from "sonner";
 import type { ReactNode } from "react";
 
@@ -19,9 +19,10 @@ export function useMe() {
 }
 
 const navItems = [
-  { to: "/dashboard", label: "Dashboard", icon: LayoutGrid },
-  { to: "/sales", label: "Sales", icon: IndianRupee },
-  { to: "/crm", label: "Tracking", icon: ListChecks },
+  { to: "/dashboard", label: "Overview", icon: LayoutGrid },
+  { to: "/collections", label: "Collections", icon: Boxes },
+  { to: "/crm", label: "Contacts", icon: Users },
+  { to: "/calendar", label: "Calendar", icon: CalendarDays },
 ] as const;
 
 export function AppShell({
@@ -79,16 +80,14 @@ export function AppShell({
                 {item.label}
               </Link>
             ))}
-            {me?.isAdmin && (
-              <Link
-                to="/admin"
-                activeProps={{ className: "bg-secondary text-secondary-foreground" }}
-                className="inline-flex items-center gap-2 rounded-md px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-secondary/70 hover:text-foreground"
-              >
-                <Shield className="size-4" />
-                Admin
-              </Link>
-            )}
+            <Link
+              to="/admin"
+              activeProps={{ className: "bg-secondary text-secondary-foreground" }}
+              className="inline-flex items-center gap-2 rounded-md px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-secondary/70 hover:text-foreground"
+            >
+              <Shield className="size-4" />
+              Admin
+            </Link>
           </nav>
 
           <div className="ml-auto flex items-center gap-3">
@@ -101,17 +100,15 @@ export function AppShell({
                 )}
               </div>
             </div>
-            {me?.isAdmin && (
-              <Button
-                size="sm"
-                onClick={() => sync.mutate()}
-                disabled={sync.isPending}
-                className="gap-2"
-              >
-                <RefreshCw className={`size-4 ${sync.isPending ? "animate-spin" : ""}`} />
-                {sync.isPending ? "Syncing" : "Sync now"}
-              </Button>
-            )}
+            <Button
+              size="sm"
+              onClick={() => sync.mutate()}
+              disabled={sync.isPending}
+              className="gap-2"
+            >
+              <RefreshCw className={`size-4 ${sync.isPending ? "animate-spin" : ""}`} />
+              {sync.isPending ? "Syncing" : "Sync now"}
+            </Button>
             <div className="flex items-center gap-2">
               <Badge variant="secondary" className="capitalize">
                 {me?.role ?? "…"}

@@ -48,7 +48,7 @@ function AuthPage() {
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
-      if (data.session) router.navigate({ to: "/dashboard", replace: true });
+       if (data.session) router.navigate({ to: "/dashboard", replace: true });
     });
   }, [router]);
 
@@ -125,9 +125,8 @@ function AuthPage() {
         <MailCheck className="size-8 text-primary" />
         <h1 className="mt-4 text-2xl">Confirm your email</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          We sent a confirmation link to <span className="text-foreground">{sentTo}</span>. Open it
-          to activate your account, then sign in. New accounts start as Viewer — an admin can
-          upgrade you.
+           We sent a confirmation link to <span className="text-foreground">{sentTo}</span>. Open it
+           to activate your account, then sign in. Every confirmed CRM account has Admin access.
         </p>
         <Button className="mt-6 w-full" variant="outline" onClick={() => setSentTo(null)}>
           Back to sign in
