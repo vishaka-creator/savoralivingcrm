@@ -55,12 +55,11 @@ function Landing() {
       <div className="mx-auto flex min-h-screen max-w-5xl flex-col justify-center px-6 py-16">
         <p className="label-caps">Savora · internal tool</p>
         <h1 className="mt-3 max-w-2xl text-4xl leading-tight sm:text-5xl">
-          Inventory, kitting and sales for every Savora collection.
+          A calm command center for every Savora collection.
         </h1>
         <p className="mt-4 max-w-xl text-muted-foreground">
-          One dashboard over the Google Sheets your team already maintains — Zebra, Mini,
-          Le Cirque, Mahjong and Orchid — so you know what's in hand and how many sets you
-          can still build.
+          Quarterly performance, collection costing, contacts, calendar events and live inventory
+          in one editable workspace.
         </p>
 
         <div className="mt-8 flex flex-wrap gap-3">
