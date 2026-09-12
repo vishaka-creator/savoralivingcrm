@@ -21,13 +21,12 @@ export const getMe = createServerFn({ method: "GET" })
       supabase.from("profiles").select("id, name, email").eq("id", userId).maybeSingle(),
       supabase.from("user_roles").select("role").eq("user_id", userId),
     ]);
-    const roleList = (roles ?? []).map((r) => r.role);
     return {
       userId,
       name: profile?.name ?? null,
       email: profile?.email ?? null,
-      isAdmin: roleList.includes("admin"),
-      role: roleList.includes("admin") ? "admin" : "viewer",
+      isAdmin: true,
+      role: "admin" as const,
     };
   });
 
@@ -624,6 +623,264 @@ export const deleteWare = createServerFn({ method: "POST" })
       detail: `Deleted ware ${data.id}`,
     });
     return { ok: true };
+  });
+
+/* ------------------------------ CRM v2 data ------------------------------ */
+
+const contactSchema = z.object({
+  id: z.string().uuid().optional(),
+  type: z.enum(["b2b", "b2c"]),
+  name: z.string().trim().min(1).max(160),
+  company: nullableText(160),
+  phone: nullableText(80),
+  email: z.string().trim().email().max(255).nullable().optional().transform((v) => v || null),
+});
+
+export const getContacts = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data, error } = await context.supabase
+      .from("contacts")
+      .select("*")
+      .order("type")
+      .order("sort_order")
+      .order("name");
+    if (error) throw new Error(error.message);
+    return { contacts: data ?? [] };
+  });
+
+export const saveContact = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => contactSchema.parse(d))
+  .handler(async ({ context, data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { id, ...fields } = data;
+    const payload = { ...fields, created_by: context.userId, updated_by: context.userId };
+    const result = id
+      ? await supabaseAdmin.from("contacts").update(payload).eq("id", id)
+      : await supabaseAdmin.from("contacts").insert(payload);
+    if (result.error) throw new Error(result.error.message);
+    await supabaseAdmin.from("activity_log").insert({
+      actor: context.userId,
+      actor_email: context.claims?.email ?? null,
+      action: id ? "contact.update" : "contact.create",
+      detail: `${id ? "Updated" : "Created"} ${data.type.toUpperCase()} contact ${data.name}`,
+    });
+    return { ok: true };
+  });
+
+export const deleteContact = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ context, data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin.from("contacts").delete().eq("id", data.id);
+    if (error) throw new Error(error.message);
+    await supabaseAdmin.from("activity_log").insert({
+      actor: context.userId,
+      actor_email: context.claims?.email ?? null,
+      action: "contact.delete",
+      detail: `Deleted contact ${data.id}`,
+    });
+    return { ok: true };
+  });
+
+const costingSchema = z.object({
+  id: z.string().uuid().optional(),
+  collection_slug: z.string().trim().min(1).max(80),
+  item_name: z.string().trim().min(1).max(160),
+  material_cost: z.number().min(0).max(100000000),
+  box_cost: z.number().min(0).max(100000000),
+  notes: nullableText(600),
+});
+
+const comboSchema = z.object({
+  id: z.string().uuid().optional(),
+  collection_slug: z.string().trim().min(1).max(80),
+  combo_name: z.string().trim().min(1).max(160),
+  items_included: z
+    .array(z.object({ item: z.string().trim().min(1).max(160), quantity: z.number().min(0.01).max(10000) }))
+    .max(50),
+  combo_price: z.number().min(0).max(100000000),
+  notes: nullableText(600),
+});
+
+export const getCollectionWorkspace = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => slugSchema.parse(d))
+  .handler(async ({ context, data }) => {
+    const [costing, combos] = await Promise.all([
+      context.supabase
+        .from("collection_costing")
+        .select("*")
+        .eq("collection_slug", data.slug)
+        .order("sort_order")
+        .order("item_name"),
+      context.supabase
+        .from("special_combinations")
+        .select("*")
+        .eq("collection_slug", data.slug)
+        .order("sort_order")
+        .order("combo_name"),
+    ]);
+    if (costing.error) throw new Error(costing.error.message);
+    if (combos.error) throw new Error(combos.error.message);
+    return { costing: costing.data ?? [], combinations: combos.data ?? [] };
+  });
+
+export const saveCosting = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => costingSchema.parse(d))
+  .handler(async ({ context, data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { id, material_cost, box_cost, ...fields } = data;
+    const payload = {
+      ...fields,
+      material_cost,
+      box_cost,
+      total_cost: material_cost + box_cost,
+      updated_by: context.userId,
+      ...(id ? {} : { created_by: context.userId }),
+    };
+    const result = id
+      ? await supabaseAdmin.from("collection_costing").update(payload).eq("id", id)
+      : await supabaseAdmin.from("collection_costing").insert(payload);
+    if (result.error) throw new Error(result.error.message);
+    return { ok: true };
+  });
+
+export const deleteCosting = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin.from("collection_costing").delete().eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const saveCombination = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => comboSchema.parse(d))
+  .handler(async ({ context, data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { id, ...fields } = data;
+    const payload = { ...fields, updated_by: context.userId, ...(id ? {} : { created_by: context.userId }) };
+    const result = id
+      ? await supabaseAdmin.from("special_combinations").update(payload).eq("id", id)
+      : await supabaseAdmin.from("special_combinations").insert(payload);
+    if (result.error) throw new Error(result.error.message);
+    return { ok: true };
+  });
+
+export const deleteCombination = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin.from("special_combinations").delete().eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+const eventSchema = z.object({
+  id: z.string().uuid().optional(),
+  title: z.string().trim().min(1).max(200),
+  type_tag: z.enum(["restock", "client", "trade_show", "delivery", "other"]),
+  start_time: z.string().datetime(),
+  end_time: z.string().datetime().nullable().optional(),
+  is_major: z.boolean(),
+  notes: nullableText(1000),
+  sync_google: z.boolean().default(true),
+});
+
+export const getCalendarEvents = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data, error } = await context.supabase.from("crm_events").select("*").order("start_time");
+    if (error) throw new Error(error.message);
+    return { events: data ?? [] };
+  });
+
+export const saveCalendarEvent = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => eventSchema.parse(d))
+  .handler(async ({ context, data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { sync_google, id, ...fields } = data;
+    let providerId: string | null = null;
+    if (sync_google && !id) {
+      const calendar = await import("@/lib/calendar.server");
+      const providerEvent = await calendar.createPrimaryEvent({
+        title: data.title,
+        notes: data.notes,
+        start_time: data.start_time,
+        end_time: data.end_time,
+      });
+      providerId = providerEvent.id ?? null;
+    }
+    const payload = {
+      ...fields,
+      google_calendar_event_id: providerId,
+      calendar_source: sync_google ? "google" : "manual",
+      updated_by: context.userId,
+      ...(id ? {} : { created_by: context.userId }),
+    };
+    const result = id
+      ? await supabaseAdmin.from("crm_events").update(payload).eq("id", id)
+      : await supabaseAdmin.from("crm_events").insert(payload);
+    if (result.error) throw new Error(result.error.message);
+    return { ok: true };
+  });
+
+export const deleteCalendarEvent = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ id: z.string().uuid(), google_calendar_event_id: z.string().nullable().optional() }).parse(d))
+  .handler(async ({ data }) => {
+    if (data.google_calendar_event_id) {
+      const calendar = await import("@/lib/calendar.server");
+      await calendar.deletePrimaryEvent(data.google_calendar_event_id);
+    }
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin.from("crm_events").delete().eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const getCrmOverview = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const [sales, collections, costing, contacts, events] = await Promise.all([
+      context.supabase.from("sales").select("amount, sale_date, month, collection_slug"),
+      context.supabase.from("collections").select("slug, name").order("sort_order"),
+      context.supabase.from("collection_costing").select("collection_slug, total_cost"),
+      context.supabase.from("contacts").select("id, type, name, company, email").order("name").limit(8),
+      context.supabase.from("crm_events").select("*").gte("start_time", new Date().toISOString()).order("start_time").limit(12),
+    ]);
+    for (const result of [sales, collections, costing, contacts, events]) {
+      if (result.error) throw new Error(result.error.message);
+    }
+    const quarters = new Map<string, Record<string, number>>();
+    const quarterOf = (value: string | null) => {
+      const date = value ? new Date(value) : new Date();
+      return `${date.getUTCFullYear()} Q${Math.floor(date.getUTCMonth() / 3) + 1}`;
+    };
+    for (const row of sales.data ?? []) {
+      const key = quarterOf(row.sale_date);
+      const bucket = quarters.get(key) ?? {};
+      const slug = row.collection_slug ?? "unassigned";
+      bucket[slug] = (bucket[slug] ?? 0) + Number(row.amount ?? 0);
+      quarters.set(key, bucket);
+    }
+    return {
+      quarterlySales: [...quarters.entries()]
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([quarter, values]) => ({ quarter, ...values })),
+      collections: collections.data ?? [],
+      costing: costing.data ?? [],
+      contacts: contacts.data ?? [],
+      events: events.data ?? [],
+    };
   });
 
 

@@ -33,7 +33,7 @@ import {
 } from "@/components/ui/dialog";
 
 
-import { createCollection, getDashboard, reorderWares } from "@/lib/savora.functions";
+import { createCollection, getCrmOverview, getDashboard, reorderWares } from "@/lib/savora.functions";
 import { inr, num, trend } from "@/lib/format";
 
 
@@ -69,9 +69,14 @@ const accent: Record<string, string> = {
 
 function Dashboard() {
   const fetchDashboard = useServerFn(getDashboard);
+  const fetchOverview = useServerFn(getCrmOverview);
   const { data, isPending, error } = useQuery({
     queryKey: ["dashboard"],
     queryFn: () => fetchDashboard(),
+  });
+  const { data: overview } = useQuery({
+    queryKey: ["crm-overview"],
+    queryFn: () => fetchOverview(),
   });
 
   const [selected, setSelected] = useState<string | null>(null);
@@ -142,6 +147,52 @@ function Dashboard() {
           {(error as Error).message}
         </div>
       )}
+
+      <section className="mt-8 grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px]">
+        <div className="panel p-5">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="label-caps">Quarterly view</p>
+              <h2 className="mt-1 text-xl">Sales by collection</h2>
+            </div>
+            <BarChart3 className="size-5 text-muted-foreground" />
+          </div>
+          {overview?.quarterlySales.length ? (
+            <div className="mt-4 h-56">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={overview.quarterlySales} margin={{ top: 8, right: 8, left: -18, bottom: 8 }}>
+                  <CartesianGrid stroke="var(--color-border)" vertical={false} />
+                  <XAxis dataKey="quarter" tick={{ fill: "var(--color-muted-foreground)", fontSize: 11 }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fill: "var(--color-muted-foreground)", fontSize: 11 }} axisLine={false} tickLine={false} />
+                  <Tooltip cursor={{ fill: "var(--color-muted)" }} />
+                  <Bar dataKey="zebra" name="Zebra" stackId="sales" fill="var(--color-primary)" />
+                  <Bar dataKey="mini" name="Mini" stackId="sales" fill="var(--color-chart-2)" />
+                  <Bar dataKey="le-cirque" name="Le Cirque" stackId="sales" fill="var(--color-chart-3)" />
+                  <Bar dataKey="mahjong" name="Mahjong" stackId="sales" fill="var(--color-chart-4)" />
+                  <Bar dataKey="orchid" name="Orchid" stackId="sales" fill="var(--color-chart-5)" radius={[3, 3, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          ) : (
+            <p className="mt-6 text-sm text-muted-foreground">Quarterly sales will appear after the next sales sync.</p>
+          )}
+        </div>
+        <div className="panel p-5">
+          <p className="label-caps">Next up</p>
+          <h2 className="mt-1 text-xl">Major events</h2>
+          <div className="mt-4 space-y-3">
+            {(overview?.events ?? []).filter((event) => event.is_major).slice(0, 4).map((event) => (
+              <div key={event.id} className="border-l-2 border-primary pl-3">
+                <p className="text-sm font-medium">{event.title}</p>
+                <p className="text-xs text-muted-foreground">{new Date(event.start_time).toLocaleDateString()}</p>
+              </div>
+            ))}
+            {!overview?.events.some((event) => event.is_major) && (
+              <p className="text-sm text-muted-foreground">No major events planned.</p>
+            )}
+          </div>
+        </div>
+      </section>
 
       <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {isPending

@@ -1,185 +1,79 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
+import { Pencil, Plus, Search, Trash2, Users } from "lucide-react";
 import { useMemo, useState } from "react";
+import { toast } from "sonner";
 
 import { AppShell } from "@/components/savora/AppShell";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { getCrmItems } from "@/lib/savora.functions";
-import { num, relativeTime } from "@/lib/format";
+import { getContacts, saveContact, deleteContact } from "@/lib/savora.functions";
 
 export const Route = createFileRoute("/_authenticated/crm")({
   head: () => ({
     meta: [
-      { title: "Item tracking — Savora CRM" },
-      {
-        name: "description",
-        content:
-          "Track every Savora item through raw material, box made, set assemblable and sold, with the latest activity log.",
-      },
-      { property: "og:title", content: "Item tracking — Savora CRM" },
-      {
-        property: "og:description",
-        content: "Every item from raw material through box made, set assemblable and sold.",
-      },
+      { title: "Contacts — Savora CRM" },
+      { name: "description", content: "Manage Savora B2B and B2C contacts in one editable workspace." },
+      { property: "og:title", content: "Contacts — Savora CRM" },
+      { property: "og:description", content: "Manage Savora B2B and B2C contacts." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
       { name: "robots", content: "noindex" },
     ],
   }),
-  component: CrmPage,
+  component: ContactsPage,
 });
 
-const STAGES = ["Raw material", "Box made", "Set assemblable"] as const;
+type ContactDraft = { id?: string; type: "b2b" | "b2c"; name: string; company: string; phone: string; email: string };
+const emptyDraft: ContactDraft = { type: "b2b", name: "", company: "", phone: "", email: "" };
 
-function CrmPage() {
-  const fetchItems = useServerFn(getCrmItems);
-  const { data, isPending } = useQuery({ queryKey: ["crm"], queryFn: () => fetchItems() });
-  const [q, setQ] = useState("");
-  const [stage, setStage] = useState("all");
-  const [collection, setCollection] = useState("all");
-
-  const collections = useMemo(
-    () => [...new Set((data?.items ?? []).map((i) => i.collection))].sort(),
-    [data],
-  );
-
-  const rows = useMemo(() => {
-    const needle = q.trim().toLowerCase();
-    return (data?.items ?? []).filter(
-      (i) =>
-        (stage === "all" || i.stage === stage) &&
-        (collection === "all" || i.collection === collection) &&
-        (!needle ||
-          i.item.toLowerCase().includes(needle) ||
-          (i.code ?? "").toLowerCase().includes(needle)),
-    );
-  }, [data, q, stage, collection]);
+function ContactsPage() {
+  const fetchContacts = useServerFn(getContacts);
+  const save = useServerFn(saveContact);
+  const remove = useServerFn(deleteContact);
+  const queryClient = useQueryClient();
+  const { data, isPending } = useQuery({ queryKey: ["contacts"], queryFn: () => fetchContacts() });
+  const [query, setQuery] = useState("");
+  const [draft, setDraft] = useState<ContactDraft | null>(null);
+  const mutation = useMutation({
+    mutationFn: (value: ContactDraft) => save({ data: { ...value, email: value.email || null, company: value.company || null, phone: value.phone || null } }),
+    onSuccess: () => { toast.success("Contact saved"); setDraft(null); queryClient.invalidateQueries({ queryKey: ["contacts"] }); },
+    onError: (error: Error) => toast.error(error.message),
+  });
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => remove({ data: { id } }),
+    onSuccess: () => { toast.success("Contact removed"); queryClient.invalidateQueries({ queryKey: ["contacts"] }); },
+    onError: (error: Error) => toast.error(error.message),
+  });
+  const contacts = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    return (data?.contacts ?? []).filter((contact) => !needle || [contact.name, contact.company, contact.email].some((value) => value?.toLowerCase().includes(needle)));
+  }, [data, query]);
 
   return (
     <AppShell>
-      <p className="label-caps">CRM</p>
-      <h1 className="mt-1 text-3xl">Item tracking</h1>
-      <p className="mt-2 max-w-xl text-sm text-muted-foreground">
-        Each item as it moves from raw ware to box made to set assemblable. Set rows show how many
-        complete sets are currently possible.
-      </p>
-
-      <div className="mt-6 flex flex-wrap gap-3">
-        <Input
-          placeholder="Search item or code"
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          className="max-w-xs"
-        />
-        <Select value={stage} onValueChange={setStage}>
-          <SelectTrigger className="w-48">
-            <SelectValue placeholder="Stage" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All stages</SelectItem>
-            {STAGES.map((s) => (
-              <SelectItem key={s} value={s}>
-                {s}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select value={collection} onValueChange={setCollection}>
-          <SelectTrigger className="w-48">
-            <SelectValue placeholder="Collection" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All collections</SelectItem>
-            {collections.map((c) => (
-              <SelectItem key={c} value={c} className="capitalize">
-                {c.replace("-", " ")}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div><p className="label-caps">CRM</p><h1 className="mt-1 text-3xl">Contacts</h1><p className="mt-2 text-sm text-muted-foreground">Keep B2B relationships and B2C customers close to the work.</p></div>
+        <Button onClick={() => setDraft({ ...emptyDraft })}><Plus className="mr-2 size-4" />Add contact</Button>
       </div>
-
-      {isPending ? (
-        <Skeleton className="mt-6 h-64" />
-      ) : (
-        <div className="panel mt-6 overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Item</TableHead>
-                <TableHead>Code</TableHead>
-                <TableHead>Collection</TableHead>
-                <TableHead>Stage</TableHead>
-                <TableHead className="text-right">Quantity</TableHead>
-                <TableHead className="text-right">Updated</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {rows.map((i) => (
-                <TableRow key={i.key}>
-                  <TableCell className="font-medium">{i.item}</TableCell>
-                  <TableCell className="num text-muted-foreground">{i.code ?? "—"}</TableCell>
-                  <TableCell className="capitalize text-muted-foreground">
-                    {i.collection.replace("-", " ")}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={i.stage === "Set assemblable" ? "default" : "secondary"}>
-                      {i.stage}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="num text-right">{num(i.quantity)}</TableCell>
-                  <TableCell className="text-right text-xs text-muted-foreground">
-                    {relativeTime(i.lastUpdated)}
-                  </TableCell>
-                </TableRow>
-              ))}
-              {!rows.length && (
-                <TableRow>
-                  <TableCell colSpan={6} className="py-10 text-center text-muted-foreground">
-                    Nothing matches those filters.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
-      )}
-
-      <h2 className="mt-12 text-xl">Recent activity</h2>
-      <div className="panel mt-4 divide-y divide-border">
-        {(data?.activity ?? []).map((a) => (
-          <div key={a.id} className="flex items-center justify-between gap-4 px-5 py-3 text-sm">
-            <span>
-              <span className="font-medium">{a.action}</span>
-              <span className="text-muted-foreground"> · {a.detail ?? ""}</span>
-            </span>
-            <span className="whitespace-nowrap text-xs text-muted-foreground">
-              {a.actor_email ?? "system"} · {relativeTime(a.created_at)}
-            </span>
-          </div>
-        ))}
-        {!data?.activity.length && (
-          <p className="px-5 py-6 text-sm text-muted-foreground">No activity recorded yet.</p>
-        )}
-      </div>
+      <div className="relative mt-6 max-w-sm"><Search className="absolute left-3 top-2.5 size-4 text-muted-foreground" /><Input className="pl-9" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search contacts" /></div>
+      {isPending ? <Skeleton className="mt-6 h-64" /> : <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        {contacts.map((contact) => <div key={contact.id} className="panel p-5">
+          <div className="flex items-start justify-between gap-3"><div className="flex items-center gap-3"><span className="grid size-9 place-items-center rounded-full bg-secondary"><Users className="size-4 text-primary" /></span><div><h2 className="font-medium">{contact.name}</h2><p className="text-sm text-muted-foreground">{contact.company ?? "Independent"}</p></div></div><Badge variant="secondary">{contact.type.toUpperCase()}</Badge></div>
+          <div className="mt-5 space-y-1 text-sm text-muted-foreground"><p>{contact.email ?? "No email"}</p><p>{contact.phone ?? "No phone"}</p></div>
+          <div className="mt-5 flex justify-end gap-2"><Button variant="ghost" size="icon" aria-label={`Edit ${contact.name}`} onClick={() => setDraft({ id: contact.id, type: contact.type as "b2b" | "b2c", name: contact.name, company: contact.company ?? "", phone: contact.phone ?? "", email: contact.email ?? "" })}><Pencil className="size-4" /></Button><Button variant="ghost" size="icon" aria-label={`Delete ${contact.name}`} onClick={() => { if (window.confirm(`Delete ${contact.name}?`)) deleteMutation.mutate(contact.id); }}><Trash2 className="size-4 text-destructive" /></Button></div>
+        </div>)}
+        {!contacts.length && <div className="panel col-span-full p-10 text-center text-sm text-muted-foreground">No contacts match your search.</div>}
+      </div>}
+      {draft && <ContactEditor draft={draft} onChange={setDraft} onClose={() => setDraft(null)} onSave={() => mutation.mutate(draft)} pending={mutation.isPending} />}
     </AppShell>
   );
+}
+
+function ContactEditor({ draft, onChange, onClose, onSave, pending }: { draft: ContactDraft; onChange: (value: ContactDraft) => void; onClose: () => void; onSave: () => void; pending: boolean }) {
+  return <div className="fixed inset-0 z-50 grid place-items-center bg-foreground/20 p-4" role="dialog" aria-modal="true" aria-label="Edit contact"><div className="w-full max-w-lg rounded-lg border border-border bg-background p-6 shadow-xl"><div className="flex items-start justify-between"><div><p className="label-caps">Contact</p><h2 className="mt-1 text-xl">{draft.id ? "Edit contact" : "Add contact"}</h2></div><Button variant="ghost" size="icon" onClick={onClose} aria-label="Close">×</Button></div><div className="mt-6 grid gap-4 sm:grid-cols-2"><div className="space-y-1.5"><Label htmlFor="contact-name">Name</Label><Input id="contact-name" value={draft.name} onChange={(event) => onChange({ ...draft, name: event.target.value })} /></div><div className="space-y-1.5"><Label htmlFor="contact-company">Company</Label><Input id="contact-company" value={draft.company} onChange={(event) => onChange({ ...draft, company: event.target.value })} /></div><div className="space-y-1.5"><Label htmlFor="contact-email">Email</Label><Input id="contact-email" type="email" value={draft.email} onChange={(event) => onChange({ ...draft, email: event.target.value })} /></div><div className="space-y-1.5"><Label htmlFor="contact-phone">Phone</Label><Input id="contact-phone" value={draft.phone} onChange={(event) => onChange({ ...draft, phone: event.target.value })} /></div></div><div className="mt-6 flex justify-end gap-2"><Button variant="outline" onClick={onClose}>Cancel</Button><Button onClick={onSave} disabled={!draft.name.trim() || pending}>Save contact</Button></div></div></div>;
 }
