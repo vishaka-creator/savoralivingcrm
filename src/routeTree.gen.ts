@@ -14,6 +14,7 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
+import { Route as AuthenticatedCollectionsRouteImport } from './routes/_authenticated/collections'
 import { Route as AuthenticatedCrmRouteImport } from './routes/_authenticated/crm'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedSalesRouteImport } from './routes/_authenticated/sales'
@@ -44,6 +45,12 @@ const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
   path: '/admin',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedCollectionsRoute =
+  AuthenticatedCollectionsRouteImport.update({
+    id: '/collections',
+    path: '/collections',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedCrmRoute = AuthenticatedCrmRouteImport.update({
   id: '/crm',
   path: '/crm',
@@ -61,9 +68,9 @@ const AuthenticatedSalesRoute = AuthenticatedSalesRouteImport.update({
 } as any)
 const AuthenticatedCollectionsSlugRoute =
   AuthenticatedCollectionsSlugRouteImport.update({
-    id: '/collections/$slug',
-    path: '/collections/$slug',
-    getParentRoute: () => AuthenticatedRouteRoute,
+    id: '/$slug',
+    path: '/$slug',
+    getParentRoute: () => AuthenticatedCollectionsRoute,
   } as any)
 const ApiPublicSyncSheetsRoute = ApiPublicSyncSheetsRouteImport.update({
   id: '/api/public/sync-sheets',
@@ -76,6 +83,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/reset-password': typeof ResetPasswordRoute
   '/admin': typeof AuthenticatedAdminRoute
+  '/collections': typeof AuthenticatedCollectionsRouteWithChildren
   '/crm': typeof AuthenticatedCrmRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/sales': typeof AuthenticatedSalesRoute
@@ -87,6 +95,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/reset-password': typeof ResetPasswordRoute
   '/admin': typeof AuthenticatedAdminRoute
+  '/collections': typeof AuthenticatedCollectionsRouteWithChildren
   '/crm': typeof AuthenticatedCrmRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/sales': typeof AuthenticatedSalesRoute
@@ -100,6 +109,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/reset-password': typeof ResetPasswordRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
+  '/_authenticated/collections': typeof AuthenticatedCollectionsRouteWithChildren
   '/_authenticated/crm': typeof AuthenticatedCrmRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/sales': typeof AuthenticatedSalesRoute
@@ -113,6 +123,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/reset-password'
     | '/admin'
+    | '/collections'
     | '/crm'
     | '/dashboard'
     | '/sales'
@@ -124,6 +135,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/reset-password'
     | '/admin'
+    | '/collections'
     | '/crm'
     | '/dashboard'
     | '/sales'
@@ -136,6 +148,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/reset-password'
     | '/_authenticated/admin'
+    | '/_authenticated/collections'
     | '/_authenticated/crm'
     | '/_authenticated/dashboard'
     | '/_authenticated/sales'
@@ -188,6 +201,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/collections': {
+      id: '/_authenticated/collections'
+      path: '/collections'
+      fullPath: '/collections'
+      preLoaderRoute: typeof AuthenticatedCollectionsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/crm': {
       id: '/_authenticated/crm'
       path: '/crm'
@@ -211,10 +231,10 @@ declare module '@tanstack/react-router' {
     }
     '/_authenticated/collections/$slug': {
       id: '/_authenticated/collections/$slug'
-      path: '/collections/$slug'
+      path: '/$slug'
       fullPath: '/collections/$slug'
       preLoaderRoute: typeof AuthenticatedCollectionsSlugRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
+      parentRoute: typeof AuthenticatedCollectionsRoute
     }
     '/api/public/sync-sheets': {
       id: '/api/public/sync-sheets'
@@ -226,20 +246,34 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AuthenticatedCollectionsRouteChildren {
+  AuthenticatedCollectionsSlugRoute: typeof AuthenticatedCollectionsSlugRoute
+}
+
+const AuthenticatedCollectionsRouteChildren: AuthenticatedCollectionsRouteChildren =
+  {
+    AuthenticatedCollectionsSlugRoute: AuthenticatedCollectionsSlugRoute,
+  }
+
+const AuthenticatedCollectionsRouteWithChildren =
+  AuthenticatedCollectionsRoute._addFileChildren(
+    AuthenticatedCollectionsRouteChildren,
+  )
+
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRoute
+  AuthenticatedCollectionsRoute: typeof AuthenticatedCollectionsRouteWithChildren
   AuthenticatedCrmRoute: typeof AuthenticatedCrmRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedSalesRoute: typeof AuthenticatedSalesRoute
-  AuthenticatedCollectionsSlugRoute: typeof AuthenticatedCollectionsSlugRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminRoute: AuthenticatedAdminRoute,
+  AuthenticatedCollectionsRoute: AuthenticatedCollectionsRouteWithChildren,
   AuthenticatedCrmRoute: AuthenticatedCrmRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedSalesRoute: AuthenticatedSalesRoute,
-  AuthenticatedCollectionsSlugRoute: AuthenticatedCollectionsSlugRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
