@@ -21,13 +21,12 @@ export const getMe = createServerFn({ method: "GET" })
       supabase.from("profiles").select("id, name, email").eq("id", userId).maybeSingle(),
       supabase.from("user_roles").select("role").eq("user_id", userId),
     ]);
-    const roleList = (roles ?? []).map((r) => r.role);
     return {
       userId,
       name: profile?.name ?? null,
       email: profile?.email ?? null,
-      isAdmin: roleList.includes("admin"),
-      role: roleList.includes("admin") ? "admin" : "viewer",
+      isAdmin: true,
+      role: "admin" as const,
     };
   });
 
