@@ -808,7 +808,7 @@ export const saveCalendarEvent = createServerFn({ method: "POST" })
   .inputValidator((d) => eventSchema.parse(d))
   .handler(async ({ context, data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { sync_google, id, ...fields } = data;
+    const { sync_google, id, end_time, ...fields } = data;
     let providerId: string | null = null;
     if (sync_google && !id) {
       const calendar = await import("@/lib/calendar.server");
@@ -816,13 +816,13 @@ export const saveCalendarEvent = createServerFn({ method: "POST" })
         title: data.title,
         notes: data.notes,
         start_time: data.start_time,
-        end_time: data.end_time ?? null,
+        end_time: end_time ?? null,
       });
       providerId = providerEvent.id ?? null;
     }
     const payload = {
       ...fields,
-      end_time: data.end_time ?? null,
+      end_time: end_time ?? null,
       google_calendar_event_id: providerId,
       calendar_source: sync_google ? "google" : "manual",
       updated_by: context.userId,
