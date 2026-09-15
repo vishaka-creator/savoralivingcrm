@@ -1,10 +1,14 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { AlertTriangle, ArrowLeft } from "lucide-react";
+import { AlertTriangle, ArrowLeft, Plus, Trash2 } from "lucide-react";
+import { useState } from "react";
+import { toast } from "sonner";
 
 import { AppShell } from "@/components/savora/AppShell";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -16,7 +20,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { getCollectionDetail } from "@/lib/savora.functions";
+import { deleteCombination, deleteCosting, getCollectionDetail, getCollectionWorkspace, saveCombination, saveCosting } from "@/lib/savora.functions";
 import { inr, num, relativeTime } from "@/lib/format";
 
 export const Route = createFileRoute("/_authenticated/collections/$slug")({
@@ -49,10 +53,22 @@ export const Route = createFileRoute("/_authenticated/collections/$slug")({
 function CollectionDetail() {
   const { slug } = Route.useParams();
   const fetchDetail = useServerFn(getCollectionDetail);
+  const fetchWorkspace = useServerFn(getCollectionWorkspace);
   const { data, isPending, error } = useQuery({
     queryKey: ["collection", slug],
     queryFn: () => fetchDetail({ data: { slug } }),
   });
+  const { data: workspace } = useQuery({ queryKey: ["collection-workspace", slug], queryFn: () => fetchWorkspace({ data: { slug } }) });
+  const client = useQueryClient();
+  const [costingDraft, setCostingDraft] = useState({ item_name: "", material_cost: "0", box_cost: "0", notes: "" });
+  const [comboDraft, setComboDraft] = useState({ combo_name: "", item: "", quantity: "1", combo_price: "0", notes: "" });
+  const saveCost = useServerFn(saveCosting);
+  const removeCost = useServerFn(deleteCosting);
+  const saveCombo = useServerFn(saveCombination);
+  const removeCombo = useServerFn(deleteCombination);
+  const refresh = () => client.invalidateQueries({ queryKey: ["collection-workspace", slug] });
+  const costMutation = useMutation({ mutationFn: () => saveCost({ data: { collection_slug: slug, item_name: costingDraft.item_name, material_cost: Number(costingDraft.material_cost), box_cost: Number(costingDraft.box_cost), notes: costingDraft.notes || null } }), onSuccess: () => { toast.success("Costing line saved"); setCostingDraft({ item_name: "", material_cost: "0", box_cost: "0", notes: "" }); refresh(); }, onError: (e: Error) => toast.error(e.message) });
+  const comboMutation = useMutation({ mutationFn: () => saveCombo({ data: { collection_slug: slug, combo_name: comboDraft.combo_name, items_included: [{ item: comboDraft.item, quantity: Number(comboDraft.quantity) }], combo_price: Number(comboDraft.combo_price), notes: comboDraft.notes || null } }), onSuccess: () => { toast.success("Combination saved"); setComboDraft({ combo_name: "", item: "", quantity: "1", combo_price: "0", notes: "" }); refresh(); }, onError: (e: Error) => toast.error(e.message) });
 
   return (
     <AppShell>
@@ -93,6 +109,8 @@ function CollectionDetail() {
               <TabsTrigger value="materials">Stock in hand</TabsTrigger>
               <TabsTrigger value="boxes">Boxes</TabsTrigger>
               <TabsTrigger value="sales">Sales</TabsTrigger>
+              <TabsTrigger value="costing">Costing</TabsTrigger>
+              <TabsTrigger value="combos">Special combinations</TabsTrigger>
             </TabsList>
 
             <TabsContent value="sets" className="space-y-4">
@@ -260,6 +278,14 @@ function CollectionDetail() {
                   </TableBody>
                 </Table>
               </div>
+            </TabsContent>
+            <TabsContent value="costing" className="space-y-4">
+              <div className="panel p-5"><h2 className="text-lg">Add costing line</h2><div className="mt-4 grid gap-3 sm:grid-cols-4"><Input placeholder="Item name" value={costingDraft.item_name} onChange={(e) => setCostingDraft({ ...costingDraft, item_name: e.target.value })} /><Input type="number" min="0" placeholder="Material cost" value={costingDraft.material_cost} onChange={(e) => setCostingDraft({ ...costingDraft, material_cost: e.target.value })} /><Input type="number" min="0" placeholder="Box cost" value={costingDraft.box_cost} onChange={(e) => setCostingDraft({ ...costingDraft, box_cost: e.target.value })} /><Button disabled={!costingDraft.item_name.trim() || costMutation.isPending} onClick={() => costMutation.mutate()}><Plus className="mr-2 size-4" />Add line</Button></div></div>
+              <div className="panel overflow-hidden"><Table><TableHeader><TableRow><TableHead>Item</TableHead><TableHead className="text-right">Material</TableHead><TableHead className="text-right">Box</TableHead><TableHead className="text-right">Total</TableHead><TableHead /></TableRow></TableHeader><TableBody>{(workspace?.costing ?? []).map((line) => <TableRow key={line.id}><TableCell className="font-medium">{line.item_name}</TableCell><TableCell className="num text-right">{inr(line.material_cost)}</TableCell><TableCell className="num text-right">{inr(line.box_cost)}</TableCell><TableCell className="num text-right font-medium">{inr(line.total_cost)}</TableCell><TableCell className="text-right"><Button variant="ghost" size="icon" aria-label={`Delete ${line.item_name}`} onClick={() => removeCost({ data: { id: line.id } }).then(refresh).catch((e: Error) => toast.error(e.message))}><Trash2 className="size-4 text-destructive" /></Button></TableCell></TableRow>)}</TableBody></Table>{!workspace?.costing.length && <p className="p-8 text-center text-sm text-muted-foreground">No costing lines yet.</p>}</div>
+            </TabsContent>
+            <TabsContent value="combos" className="space-y-4">
+              <div className="panel p-5"><h2 className="text-lg">Add special combination</h2><div className="mt-4 grid gap-3 sm:grid-cols-5"><Input placeholder="Combination name" value={comboDraft.combo_name} onChange={(e) => setComboDraft({ ...comboDraft, combo_name: e.target.value })} /><Input placeholder="Included ware" value={comboDraft.item} onChange={(e) => setComboDraft({ ...comboDraft, item: e.target.value })} /><Input type="number" min="0.01" placeholder="Qty" value={comboDraft.quantity} onChange={(e) => setComboDraft({ ...comboDraft, quantity: e.target.value })} /><Input type="number" min="0" placeholder="Price" value={comboDraft.combo_price} onChange={(e) => setComboDraft({ ...comboDraft, combo_price: e.target.value })} /><Button disabled={!comboDraft.combo_name.trim() || !comboDraft.item.trim() || comboMutation.isPending} onClick={() => comboMutation.mutate()}><Plus className="mr-2 size-4" />Add combo</Button></div></div>
+              <div className="grid gap-4 md:grid-cols-2">{(workspace?.combinations ?? []).map((combo) => <div key={combo.id} className="panel p-5"><div className="flex items-start justify-between"><div><h2 className="font-medium">{combo.combo_name}</h2><p className="mt-1 text-sm text-muted-foreground">{(combo.items_included as Array<{ item: string; quantity: number }>).map((item) => `${item.quantity} × ${item.item}`).join(", ")}</p></div><Button variant="ghost" size="icon" aria-label={`Delete ${combo.combo_name}`} onClick={() => removeCombo({ data: { id: combo.id } }).then(refresh).catch((e: Error) => toast.error(e.message))}><Trash2 className="size-4 text-destructive" /></Button></div><p className="metric mt-5 text-xl">{inr(combo.combo_price)}</p></div>)}</div>
             </TabsContent>
           </Tabs>
         </>
