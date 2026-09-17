@@ -9,9 +9,6 @@
 export const SPREADSHEET_ID = "1dixSJJzV6SunQ5dKZJt9ViEH1G1d7hkWGZlcAk3EdsE";
 export const SPREADSHEET_URL = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}`;
 
-export const BOXES_TAB = "Boxes Stock by Vineet";
-export const LEDGER_TAB = "Debit/Credit per month";
-export const SALES_TAB = "Sales sheet ";
 
 export type CollectionSlug = "zebra" | "mini" | "le-cirque" | "mahjong" | "orchid";
 

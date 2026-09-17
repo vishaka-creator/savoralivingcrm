@@ -6,10 +6,8 @@
  * merged/offset header cells, total rows and mixed date formats.
  */
 import {
-  BOXES_TAB,
   COLLECTIONS,
   HEADER_KEYWORDS,
-  LEDGER_TAB,
   SPREADSHEET_ID,
   type CollectionSlug,
 } from "./savora-config";
