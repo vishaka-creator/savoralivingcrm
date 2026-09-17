@@ -145,23 +145,24 @@ const normalise = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
 /* --------------------------------- fetch -------------------------------- */
 
 export interface SheetSnapshot {
-  perCollection: Record<
-    CollectionSlug,
-    { products: ProductRow[]; boxes: BoxRow[] }
-  >;
-  sales: SaleRow[];
-  expenses: ExpenseRow[];
+  perCollection: Record<CollectionSlug, { products: ProductRow[] }>;
   tabsRead: string[];
 }
 
+/** A1 range with the sheet name safely quoted (escapes embedded quotes). */
+export function toA1Range(sheetName: string, cellRange: string): string {
+  const escaped = sheetName.replace(/'/g, "''");
+  return `'${escaped}'!${cellRange}`;
+}
+
 export async function fetchSnapshot(): Promise<SheetSnapshot> {
+  // Only the five collection tabs (ware list + production cost) are synced;
+  // ledger, boxes-stock and sales tabs are excluded per spec.
   const ranges: string[] = [];
   for (const c of COLLECTIONS) {
-    ranges.push(`${c.sheetTab}!A1:N200`);
-    ranges.push(`${c.costTab}!A1:N200`);
+    ranges.push(toA1Range(c.sheetTab, "A1:N200"));
+    ranges.push(toA1Range(c.costTab, "A1:N200"));
   }
-  ranges.push(`${BOXES_TAB}!A1:H200`);
-  ranges.push(`${LEDGER_TAB}!A1:L400`);
 
   const grids = await batchGet(ranges);
 
@@ -200,21 +201,11 @@ export async function fetchSnapshot(): Promise<SheetSnapshot> {
     // Cost tabs sometimes hold wares the collection tab omits.
     costRows.forEach(upsert);
 
-    perCollection[c.slug] = {
-      products: [...merged.values()],
-      boxes: [],
-    };
+    perCollection[c.slug] = { products: [...merged.values()] };
   });
-
-  const boxes = parseBoxes(grids[COLLECTIONS.length * 2] ?? []);
-  for (const b of boxes) perCollection[b.collection_slug].boxes.push(b);
-
-  const ledger = parseLedger(grids[COLLECTIONS.length * 2 + 1] ?? []);
 
   return {
     perCollection,
-    sales: ledger.sales,
-    expenses: ledger.expenses,
-    tabsRead: ranges.map((r) => r.split("!")[0]!),
+    tabsRead: ranges.map((r) => r.slice(1, r.indexOf("'!", 1))),
   };
 }
