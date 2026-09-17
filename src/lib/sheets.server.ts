@@ -31,33 +31,6 @@ export interface ProductRow {
 }
 
 
-export interface BoxRow {
-  collection_slug: CollectionSlug;
-  product: string;
-  code: string | null;
-  quantity: number;
-  foam: boolean | null;
-  print_status: string | null;
-}
-
-export interface SaleRow {
-  month: string | null;
-  client_name: string;
-  billing_details: string | null;
-  amount: number | null;
-  status: string | null;
-  source_row: string;
-}
-
-export interface ExpenseRow {
-  month: string | null;
-  spend_date: string | null;
-  vendor: string | null;
-  amount: number | null;
-  remarks: string | null;
-  source_row: string;
-}
-
 async function batchGet(ranges: string[]): Promise<Row[][]> {
   const lovableKey = process.env["LOVABLE_API_KEY"];
   const connKey = process.env["GOOGLE_SHEETS_API_KEY"];
