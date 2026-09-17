@@ -6,10 +6,8 @@
  * merged/offset header cells, total rows and mixed date formats.
  */
 import {
-  BOXES_TAB,
   COLLECTIONS,
   HEADER_KEYWORDS,
-  LEDGER_TAB,
   SPREADSHEET_ID,
   type CollectionSlug,
 } from "./savora-config";
@@ -32,33 +30,6 @@ export interface ProductRow {
   printedImage: string | null;
 }
 
-
-export interface BoxRow {
-  collection_slug: CollectionSlug;
-  product: string;
-  code: string | null;
-  quantity: number;
-  foam: boolean | null;
-  print_status: string | null;
-}
-
-export interface SaleRow {
-  month: string | null;
-  client_name: string;
-  billing_details: string | null;
-  amount: number | null;
-  status: string | null;
-  source_row: string;
-}
-
-export interface ExpenseRow {
-  month: string | null;
-  spend_date: string | null;
-  vendor: string | null;
-  amount: number | null;
-  remarks: string | null;
-  source_row: string;
-}
 
 async function batchGet(ranges: string[]): Promise<Row[][]> {
   const lovableKey = process.env["LOVABLE_API_KEY"];
@@ -98,31 +69,6 @@ export function toNumber(v: unknown): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
-/** Handles dd.mm.yyyy, d/m/yyyy, yyyy-mm-dd and Sheets serial numbers. */
-export function toISODate(v: unknown): string | null {
-  if (typeof v === "number" && v > 20000 && v < 80000) {
-    const ms = Math.round((v - 25569) * 86400000);
-    return new Date(ms).toISOString().slice(0, 10);
-  }
-  const s = text(v);
-  if (!s) return null;
-  let m = /^(\d{4})-(\d{1,2})-(\d{1,2})/.exec(s);
-  if (m) return `${m[1]}-${m[2]!.padStart(2, "0")}-${m[3]!.padStart(2, "0")}`;
-  m = /^(\d{1,2})[./-](\d{1,2})[./-](\d{2,4})$/.exec(s);
-  if (m) {
-    const yRaw = m[3]!;
-    const year = yRaw.length === 2 ? `20${yRaw}` : yRaw;
-    // dd.mm.yyyy is the dominant sheet format; fall back to m/d for slashes.
-    const slashed = s.includes("/");
-    const a = Number(m[1]);
-    const b = Number(m[2]);
-    const day = slashed ? (a > 12 ? a : b) : a;
-    const month = slashed ? (a > 12 ? b : a) : b;
-    if (month < 1 || month > 12 || day < 1 || day > 31) return null;
-    return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-  }
-  return null;
-}
 
 function findHeader(rows: Row[]): { index: number; cols: Record<string, number> } | null {
   for (let i = 0; i < Math.min(rows.length, 12); i++) {
@@ -195,109 +141,28 @@ export function parseProducts(rows: Row[]): ProductRow[] {
 
 const normalise = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
 
-function resolveBoxCollection(raw: string): CollectionSlug | null {
-  const n = normalise(raw);
-  if (!n) return null;
-  for (const c of COLLECTIONS) {
-    if (c.boxAliases.some((a) => normalise(a) === n)) return c.slug;
-  }
-  for (const c of COLLECTIONS) {
-    if (c.boxAliases.some((a) => n.includes(normalise(a)))) return c.slug;
-  }
-  return null;
-}
-
-/** Boxes tab: several stacked blocks, all with the same column shape. */
-export function parseBoxes(rows: Row[]): BoxRow[] {
-  const out: BoxRow[] = [];
-  for (const row of rows) {
-    const collectionRaw = text(row?.[1]);
-    const product = text(row?.[2]);
-    const qty = toNumber(row?.[4]);
-    if (!collectionRaw || !product || qty === null) continue;
-    if (isTotalRow(collectionRaw) || /^collection/i.test(collectionRaw)) continue;
-    const slug = resolveBoxCollection(collectionRaw);
-    if (!slug) continue; // out-of-scope collection (e.g. Parakeet)
-    const foamRaw = text(row?.[7]).toLowerCase();
-    out.push({
-      collection_slug: slug,
-      product,
-      code: text(row?.[3]) || null,
-      quantity: qty,
-      foam: foamRaw === "yes" ? true : foamRaw === "no" ? false : null,
-      print_status: text(row?.[6]) || null,
-    });
-  }
-  return out;
-}
-
-const MONTHS = [
-  "january", "february", "march", "april", "may", "june",
-  "july", "august", "september", "october", "november", "december",
-];
-
-/** Debit/Credit per month: expenses in cols B–F, client sales in cols I–L. */
-export function parseLedger(rows: Row[]): { sales: SaleRow[]; expenses: ExpenseRow[] } {
-  const sales: SaleRow[] = [];
-  const expenses: ExpenseRow[] = [];
-  let month: string | null = null;
-
-  rows.forEach((row, i) => {
-    const first = text(row?.[0]);
-    if (first && MONTHS.includes(first.toLowerCase())) {
-      month = first.charAt(0).toUpperCase() + first.slice(1).toLowerCase();
-    }
-
-    const vendor = text(row?.[1]);
-    const spendAmount = toNumber(row?.[3]);
-    if (vendor && spendAmount !== null && !/^dealers$/i.test(vendor)) {
-      expenses.push({
-        month,
-        spend_date: toISODate(row?.[2]),
-        vendor,
-        amount: spendAmount,
-        remarks: text(row?.[4]) || null,
-        source_row: `${LEDGER_TAB}:${i}`,
-      });
-    }
-
-    const client = text(row?.[8]);
-    const saleAmount = toNumber(row?.[10]);
-    if (client && !/^client name$/i.test(client) && saleAmount !== null) {
-      sales.push({
-        month,
-        client_name: client,
-        billing_details: text(row?.[9]) || null,
-        amount: saleAmount,
-        status: text(row?.[11]) || null,
-        source_row: `${LEDGER_TAB}:${i}`,
-      });
-    }
-  });
-
-  return { sales, expenses };
-}
 
 /* --------------------------------- fetch -------------------------------- */
 
 export interface SheetSnapshot {
-  perCollection: Record<
-    CollectionSlug,
-    { products: ProductRow[]; boxes: BoxRow[] }
-  >;
-  sales: SaleRow[];
-  expenses: ExpenseRow[];
+  perCollection: Record<CollectionSlug, { products: ProductRow[] }>;
   tabsRead: string[];
 }
 
+/** A1 range with the sheet name safely quoted (escapes embedded quotes). */
+export function toA1Range(sheetName: string, cellRange: string): string {
+  const escaped = sheetName.replace(/'/g, "''");
+  return `'${escaped}'!${cellRange}`;
+}
+
 export async function fetchSnapshot(): Promise<SheetSnapshot> {
+  // Only the five collection tabs (ware list + production cost) are synced;
+  // ledger, boxes-stock and sales tabs are excluded per spec.
   const ranges: string[] = [];
   for (const c of COLLECTIONS) {
-    ranges.push(`${c.sheetTab}!A1:N200`);
-    ranges.push(`${c.costTab}!A1:N200`);
+    ranges.push(toA1Range(c.sheetTab, "A1:N200"));
+    ranges.push(toA1Range(c.costTab, "A1:N200"));
   }
-  ranges.push(`${BOXES_TAB}!A1:H200`);
-  ranges.push(`${LEDGER_TAB}!A1:L400`);
 
   const grids = await batchGet(ranges);
 
@@ -336,21 +201,11 @@ export async function fetchSnapshot(): Promise<SheetSnapshot> {
     // Cost tabs sometimes hold wares the collection tab omits.
     costRows.forEach(upsert);
 
-    perCollection[c.slug] = {
-      products: [...merged.values()],
-      boxes: [],
-    };
+    perCollection[c.slug] = { products: [...merged.values()] };
   });
-
-  const boxes = parseBoxes(grids[COLLECTIONS.length * 2] ?? []);
-  for (const b of boxes) perCollection[b.collection_slug].boxes.push(b);
-
-  const ledger = parseLedger(grids[COLLECTIONS.length * 2 + 1] ?? []);
 
   return {
     perCollection,
-    sales: ledger.sales,
-    expenses: ledger.expenses,
-    tabsRead: ranges.map((r) => r.split("!")[0]!),
+    tabsRead: ranges.map((r) => r.slice(1, r.indexOf("'!", 1))),
   };
 }

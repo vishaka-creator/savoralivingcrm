@@ -9,9 +9,6 @@
 export const SPREADSHEET_ID = "1dixSJJzV6SunQ5dKZJt9ViEH1G1d7hkWGZlcAk3EdsE";
 export const SPREADSHEET_URL = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}`;
 
-export const BOXES_TAB = "Boxes Stock by Vineet";
-export const LEDGER_TAB = "Debit/Credit per month";
-export const SALES_TAB = "Sales sheet ";
 
 export type CollectionSlug = "zebra" | "mini" | "le-cirque" | "mahjong" | "orchid";
 
@@ -26,8 +23,6 @@ export interface CollectionConfig {
   shopifyHandle: string | null;
   /** Whether the savora.in mapping has been confirmed internally. */
   shopifyConfirmed: boolean;
-  /** Names used for this collection inside the shared "Boxes Stock" tab. */
-  boxAliases: string[];
   accent: string;
 }
 
@@ -39,7 +34,6 @@ export const COLLECTIONS: CollectionConfig[] = [
     costTab: "Zebra Production cost",
     shopifyHandle: "masai",
     shopifyConfirmed: false,
-    boxAliases: ["zebra"],
     accent: "collection-zebra",
   },
   {
@@ -49,7 +43,6 @@ export const COLLECTIONS: CollectionConfig[] = [
     costTab: "Mini Production Cost",
     shopifyHandle: "masai-minis",
     shopifyConfirmed: false,
-    boxAliases: ["mini", "minis", "zebra minis"],
     accent: "collection-mini",
   },
   {
@@ -59,7 +52,6 @@ export const COLLECTIONS: CollectionConfig[] = [
     costTab: "Le cirque Production Cost",
     shopifyHandle: "le-cirque",
     shopifyConfirmed: true,
-    boxAliases: ["le cirque", "le-cirque", "circus", "cirque"],
     accent: "collection-cirque",
   },
   {
@@ -69,7 +61,6 @@ export const COLLECTIONS: CollectionConfig[] = [
     costTab: "Mahajong Production Cost",
     shopifyHandle: null,
     shopifyConfirmed: false,
-    boxAliases: ["mahjong", "mahajong"],
     accent: "collection-mahjong",
   },
   {
@@ -79,7 +70,6 @@ export const COLLECTIONS: CollectionConfig[] = [
     costTab: "Savora Costing_Eden Bloom",
     shopifyHandle: "eden-bloom",
     shopifyConfirmed: true,
-    boxAliases: ["orchid", "eden bloom", "floral"],
     accent: "collection-orchid",
   },
 ];

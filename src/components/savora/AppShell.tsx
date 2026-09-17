@@ -41,9 +41,7 @@ export function AppShell({
     mutationFn: () => runSync(),
     onSuccess: (result) => {
       if (result.ok) {
-        toast.success(
-          `Synced ${result.counts.skus} wares, ${result.counts.boxes} box lines, ${result.counts.sales} sales rows`,
-        );
+        toast.success(`Synced ${result.counts.wares} wares`);
       } else {
         toast.error(result.message ?? "Sync failed");
       }
