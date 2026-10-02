@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -39,6 +40,11 @@ export interface WareRow {
   orderedQuantity: number | null;
   approxWeight: number | null;
   stockInHand: number;
+  influencerStock: number;
+  storeStock: number;
+  costPrice: number | null;
+  mrp: number | null;
+  remarks: string | null;
 }
 
 const numOrNull = (v: string) => (v.trim() === "" ? null : Number(v));
@@ -59,6 +65,11 @@ export function WareRowActions({ ware }: { ware: WareRow }) {
     orderedQuantity: ware.orderedQuantity === null ? "" : String(ware.orderedQuantity),
     approxWeight: ware.approxWeight === null ? "" : String(ware.approxWeight),
     stockInHand: String(ware.stockInHand),
+    influencerStock: String(ware.influencerStock),
+    storeStock: String(ware.storeStock),
+    costPrice: ware.costPrice === null ? "" : String(ware.costPrice),
+    mrp: ware.mrp === null ? "" : String(ware.mrp),
+    remarks: ware.remarks ?? "",
   });
 
   const set = (key: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) =>
@@ -78,6 +89,11 @@ export function WareRowActions({ ware }: { ware: WareRow }) {
           ordered_quantity: numOrNull(form.orderedQuantity),
           approx_weight_grams: numOrNull(form.approxWeight),
           stock_in_hand: Number(form.stockInHand || 0),
+          influencer_stock: Number(form.influencerStock || 0),
+          store_stock: Number(form.storeStock || 0),
+          cost_price: numOrNull(form.costPrice),
+          mrp: numOrNull(form.mrp),
+          remarks: form.remarks.trim() || null,
         },
       }),
     onSuccess: () => {
@@ -188,6 +204,43 @@ export function WareRowActions({ ware }: { ware: WareRow }) {
               value={form.stockInHand}
               onChange={set("stockInHand")}
             />
+            <Field
+              label="Influencer stock"
+              id="w-influencer-stock"
+              type="number"
+              value={form.influencerStock}
+              onChange={set("influencerStock")}
+            />
+            <Field
+              label="Stock on sales"
+              id="w-store-stock"
+              type="number"
+              value={form.storeStock}
+              onChange={set("storeStock")}
+            />
+            <Field
+              label="Cost Price"
+              id="w-cost-price"
+              type="number"
+              value={form.costPrice}
+              onChange={set("costPrice")}
+            />
+            <Field
+              label="MRP"
+              id="w-mrp"
+              type="number"
+              value={form.mrp}
+              onChange={set("mrp")}
+            />
+            <div className="space-y-1.5 sm:col-span-2">
+              <Label htmlFor="w-remarks">Remarks / where given</Label>
+              <Textarea
+                id="w-remarks"
+                value={form.remarks}
+                onChange={(e) => setForm((current) => ({ ...current, remarks: e.target.value }))}
+                placeholder="Add who received this ware or where it was given"
+              />
+            </div>
           </div>
 
           <DialogFooter>

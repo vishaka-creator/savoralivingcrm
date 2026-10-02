@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/table";
 import { WareRowActions } from "@/components/savora/WareRowActions";
 import { updateWareSales } from "@/lib/savora.functions";
-import { num } from "@/lib/format";
+import { inr, num } from "@/lib/format";
 
 export interface WareTableRow {
   id: string;
@@ -33,6 +33,9 @@ export interface WareTableRow {
   soldPcs: number;
   influencerStock: number | null;
   storeStock: number | null;
+  costPrice: number | null;
+  mrp: number | null;
+  remarks: string | null;
   stockInHand: number;
   threshold: number;
 }
@@ -50,6 +53,9 @@ type ColumnKey =
   | "soldPcs"
   | "influencerStock"
   | "storeStock"
+  | "costPrice"
+  | "mrp"
+  | "remarks"
   | "stock";
 
 const COLUMN_LABELS: Record<ColumnKey, string> = {
@@ -64,7 +70,10 @@ const COLUMN_LABELS: Record<ColumnKey, string> = {
   soldSets: "Sales — Sets",
   soldPcs: "Sales — Pcs",
   influencerStock: "Influencer Stock",
-  storeStock: "Store Stock",
+  storeStock: "Stock on Sales",
+  costPrice: "Cost Price",
+  mrp: "MRP",
+  remarks: "Remarks / Where Given",
   stock: "Stock",
 };
 
@@ -81,6 +90,9 @@ const DEFAULT_ORDER: ColumnKey[] = [
   "soldPcs",
   "influencerStock",
   "storeStock",
+  "costPrice",
+  "mrp",
+  "remarks",
   "stock",
 ];
 
@@ -91,6 +103,8 @@ const NUMERIC: ColumnKey[] = [
   "soldPcs",
   "influencerStock",
   "storeStock",
+  "costPrice",
+  "mrp",
   "stock",
 ];
 
@@ -437,6 +451,12 @@ function Cell({
       return <TableCell className="num text-right">{num(ware.influencerStock)}</TableCell>;
     case "storeStock":
       return <TableCell className="num text-right">{num(ware.storeStock)}</TableCell>;
+    case "costPrice":
+      return <TableCell className="num text-right">{ware.costPrice === null ? "—" : inr(ware.costPrice)}</TableCell>;
+    case "mrp":
+      return <TableCell className="num text-right">{ware.mrp === null ? "—" : inr(ware.mrp)}</TableCell>;
+    case "remarks":
+      return <TableCell className="min-w-56 max-w-72 whitespace-normal text-sm text-muted-foreground">{ware.remarks ?? "—"}</TableCell>;
     case "stock":
       return (
         <TableCell className="num text-right">
