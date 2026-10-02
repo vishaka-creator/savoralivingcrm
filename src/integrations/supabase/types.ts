@@ -471,60 +471,75 @@ export type Database = {
           approx_weight_grams: number | null
           code: string | null
           collection_slug: string
+          cost_price: number | null
           created_at: string
           dimensions: string | null
           dimensions_catalogue: string | null
           id: string
           image_url: string | null
+          influencer_stock: number
+          mrp: number | null
           name: string
           ordered_quantity: number | null
           pieces_per_set: number
           printed_image_url: string | null
           product_name: string | null
+          remarks: string | null
           shopify_product_id: string | null
           sold_pcs: number
           sold_sets: number
           sort_order: number | null
+          store_stock: number
           unit: string
         }
         Insert: {
           approx_weight_grams?: number | null
           code?: string | null
           collection_slug: string
+          cost_price?: number | null
           created_at?: string
           dimensions?: string | null
           dimensions_catalogue?: string | null
           id?: string
           image_url?: string | null
+          influencer_stock?: number
+          mrp?: number | null
           name: string
           ordered_quantity?: number | null
           pieces_per_set?: number
           printed_image_url?: string | null
           product_name?: string | null
+          remarks?: string | null
           shopify_product_id?: string | null
           sold_pcs?: number
           sold_sets?: number
           sort_order?: number | null
+          store_stock?: number
           unit?: string
         }
         Update: {
           approx_weight_grams?: number | null
           code?: string | null
           collection_slug?: string
+          cost_price?: number | null
           created_at?: string
           dimensions?: string | null
           dimensions_catalogue?: string | null
           id?: string
           image_url?: string | null
+          influencer_stock?: number
+          mrp?: number | null
           name?: string
           ordered_quantity?: number | null
           pieces_per_set?: number
           printed_image_url?: string | null
           product_name?: string | null
+          remarks?: string | null
           shopify_product_id?: string | null
           sold_pcs?: number
           sold_sets?: number
           sort_order?: number | null
+          store_stock?: number
           unit?: string
         }
         Relationships: [
