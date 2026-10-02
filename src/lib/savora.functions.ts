@@ -43,7 +43,7 @@ export const getDashboard = createServerFn({ method: "GET" })
       supabase
         .from("skus")
         .select(
-          "id, collection_slug, name, code, unit, ordered_quantity, approx_weight_grams, dimensions, dimensions_catalogue, product_name, image_url, printed_image_url, pieces_per_set, sold_sets, sold_pcs",
+          "id, collection_slug, name, code, unit, ordered_quantity, approx_weight_grams, dimensions, dimensions_catalogue, product_name, image_url, printed_image_url, pieces_per_set, sold_sets, sold_pcs, influencer_stock, store_stock, cost_price, mrp, remarks",
         )
         .order("sort_order", { ascending: true, nullsFirst: false })
         .order("name"),
@@ -111,8 +111,11 @@ export const getDashboard = createServerFn({ method: "GET" })
             piecesPerSet: Number(s.pieces_per_set ?? 4),
             soldSets: Number(s.sold_sets ?? 0),
             soldPcs: Number(s.sold_pcs ?? 0),
-            influencerStock: null,
-            storeStock: null,
+            influencerStock: Number(s.influencer_stock ?? 0),
+            storeStock: Number(s.store_stock ?? 0),
+            costPrice: s.cost_price === null ? null : Number(s.cost_price),
+            mrp: s.mrp === null ? null : Number(s.mrp),
+            remarks: s.remarks,
             stockInHand: Number(m?.quantity_on_hand ?? 0),
             threshold: Number(m?.low_stock_threshold ?? 20),
           };
@@ -500,6 +503,11 @@ export const updateWare = createServerFn({ method: "POST" })
         ordered_quantity: z.number().min(0).max(1000000).nullable().optional(),
         approx_weight_grams: z.number().min(0).max(1000000).nullable().optional(),
         stock_in_hand: z.number().min(0).max(1000000).optional(),
+        influencer_stock: z.number().min(0).max(1000000),
+        store_stock: z.number().min(0).max(1000000),
+        cost_price: z.number().min(0).max(100000000).nullable(),
+        mrp: z.number().min(0).max(100000000).nullable(),
+        remarks: nullableText(1000),
       })
       .parse(d),
   )
@@ -518,6 +526,11 @@ export const updateWare = createServerFn({ method: "POST" })
         printed_image_url: fields.printed_image_url ?? null,
         ordered_quantity: fields.ordered_quantity ?? null,
         approx_weight_grams: fields.approx_weight_grams ?? null,
+        influencer_stock: fields.influencer_stock,
+        store_stock: fields.store_stock,
+        cost_price: fields.cost_price ?? null,
+        mrp: fields.mrp ?? null,
+        remarks: fields.remarks ?? null,
       })
       .eq("id", id);
     if (error) throw new Error(error.message);

@@ -55,7 +55,7 @@ function Landing() {
       <div className="mx-auto flex min-h-screen max-w-5xl flex-col justify-center px-6 py-16">
         <p className="label-caps">Savora · internal tool</p>
         <h1 className="mt-3 max-w-2xl text-4xl leading-tight sm:text-5xl">
-          A calm command center for every Savora collection.
+          Savora CRM Dashboard
         </h1>
         <p className="mt-4 max-w-xl text-muted-foreground">
           Quarterly performance, collection costing, contacts, calendar events and live inventory
