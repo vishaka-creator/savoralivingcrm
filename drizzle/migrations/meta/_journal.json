@@ -8,6 +8,13 @@
       "when": 1790911164161,
       "tag": "0000_add_ware_stock_pricing_remarks",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1791130231020,
+      "tag": "0001_add_ware_media_and_remarks",
+      "breakpoints": true
     }
   ]
 }
