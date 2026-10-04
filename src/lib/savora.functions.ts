@@ -43,7 +43,7 @@ export const getDashboard = createServerFn({ method: "GET" })
       supabase
         .from("skus")
         .select(
-          "id, collection_slug, name, code, unit, ordered_quantity, approx_weight_grams, dimensions, dimensions_catalogue, product_name, image_url, printed_image_url, pieces_per_set, sold_sets, sold_pcs, influencer_stock, store_stock, cost_price, mrp, remarks",
+          "id, collection_slug, name, code, unit, ordered_quantity, approx_weight_grams, dimensions, dimensions_catalogue, product_name, image_url, printed_image_url, ware_media_path, influencer_remarks, showroom_remarks, pieces_per_set, sold_sets, sold_pcs, influencer_stock, store_stock, cost_price, mrp, remarks",
         )
         .order("sort_order", { ascending: true, nullsFirst: false })
         .order("name"),
@@ -55,6 +55,13 @@ export const getDashboard = createServerFn({ method: "GET" })
       supabase.from("sales").select("*"),
       supabase.from("sync_log").select("*").order("synced_at", { ascending: false }).limit(1),
     ]);
+
+    const mediaPaths = [...new Set((skus.data ?? []).map((sku) => sku.ware_media_path).filter((path): path is string => !!path))];
+    const signedMedia = mediaPaths.length
+      ? await supabase.storage.from("savora-ware-media").createSignedUrls(mediaPaths, 3600)
+      : { data: [], error: null };
+    if (signedMedia.error) throw new Error(signedMedia.error.message);
+    const mediaUrls = new Map((signedMedia.data ?? []).map((entry) => [entry.path, entry.signedUrl]));
 
     const materialBySku = new Map((materials.data ?? []).map((m) => [m.sku_id, m]));
     const thisMonth = currentMonthName();
@@ -107,6 +114,8 @@ export const getDashboard = createServerFn({ method: "GET" })
             productName: s.product_name,
             imageUrl: s.image_url,
             printedImageUrl: s.printed_image_url,
+            wareMediaPath: s.ware_media_path,
+            wareMediaUrl: s.ware_media_path ? mediaUrls.get(s.ware_media_path) ?? null : null,
             orderedQuantity: s.ordered_quantity === null ? null : Number(s.ordered_quantity),
             piecesPerSet: Number(s.pieces_per_set ?? 4),
             soldSets: Number(s.sold_sets ?? 0),
@@ -116,6 +125,8 @@ export const getDashboard = createServerFn({ method: "GET" })
             costPrice: s.cost_price === null ? null : Number(s.cost_price),
             mrp: s.mrp === null ? null : Number(s.mrp),
             remarks: s.remarks,
+            influencerRemarks: s.influencer_remarks,
+            showroomRemarks: s.showroom_remarks,
             stockInHand: Number(m?.quantity_on_hand ?? 0),
             threshold: Number(m?.low_stock_threshold ?? 20),
           };
@@ -500,6 +511,7 @@ export const updateWare = createServerFn({ method: "POST" })
         product_name: nullableText(200),
         image_url: nullableText(600),
         printed_image_url: nullableText(600),
+        ware_media_path: nullableText(500),
         ordered_quantity: z.number().min(0).max(1000000).nullable().optional(),
         approx_weight_grams: z.number().min(0).max(1000000).nullable().optional(),
         stock_in_hand: z.number().min(0).max(1000000).optional(),
@@ -508,6 +520,8 @@ export const updateWare = createServerFn({ method: "POST" })
         cost_price: z.number().min(0).max(100000000).nullable(),
         mrp: z.number().min(0).max(100000000).nullable(),
         remarks: nullableText(1000),
+        influencer_remarks: nullableText(1000),
+        showroom_remarks: nullableText(1000),
       })
       .parse(d),
   )
@@ -524,6 +538,7 @@ export const updateWare = createServerFn({ method: "POST" })
         product_name: fields.product_name ?? null,
         image_url: fields.image_url ?? null,
         printed_image_url: fields.printed_image_url ?? null,
+        ware_media_path: fields.ware_media_path ?? null,
         ordered_quantity: fields.ordered_quantity ?? null,
         approx_weight_grams: fields.approx_weight_grams ?? null,
         influencer_stock: fields.influencer_stock,
@@ -531,6 +546,8 @@ export const updateWare = createServerFn({ method: "POST" })
         cost_price: fields.cost_price ?? null,
         mrp: fields.mrp ?? null,
         remarks: fields.remarks ?? null,
+        influencer_remarks: fields.influencer_remarks ?? null,
+        showroom_remarks: fields.showroom_remarks ?? null,
       })
       .eq("id", id);
     if (error) throw new Error(error.message);
@@ -760,16 +777,18 @@ export const saveCosting = createServerFn({ method: "POST" })
       ? await supabaseAdmin.from("collection_costing").update(payload).eq("id", id)
       : await supabaseAdmin.from("collection_costing").insert(payload);
     if (result.error) throw new Error(result.error.message);
+    await supabaseAdmin.from("activity_log").insert({ actor: context.userId, actor_email: context.claims?.email ?? null, action: id ? "costing.update" : "costing.create", detail: `${id ? "Updated" : "Added"} costing: ${data.item_name}` });
     return { ok: true };
   });
 
 export const deleteCosting = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ id: z.string().uuid() }).parse(d))
-  .handler(async ({ data }) => {
+  .handler(async ({ context, data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { error } = await supabaseAdmin.from("collection_costing").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
+    await supabaseAdmin.from("activity_log").insert({ actor: context.userId, actor_email: context.claims?.email ?? null, action: "costing.delete", detail: `Deleted costing line ${data.id}` });
     return { ok: true };
   });
 
@@ -784,16 +803,18 @@ export const saveCombination = createServerFn({ method: "POST" })
       ? await supabaseAdmin.from("special_combinations").update(payload).eq("id", id)
       : await supabaseAdmin.from("special_combinations").insert(payload);
     if (result.error) throw new Error(result.error.message);
+    await supabaseAdmin.from("activity_log").insert({ actor: context.userId, actor_email: context.claims?.email ?? null, action: id ? "combination.update" : "combination.create", detail: `${id ? "Updated" : "Added"} combination: ${data.combo_name}` });
     return { ok: true };
   });
 
 export const deleteCombination = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ id: z.string().uuid() }).parse(d))
-  .handler(async ({ data }) => {
+  .handler(async ({ context, data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { error } = await supabaseAdmin.from("special_combinations").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
+    await supabaseAdmin.from("activity_log").insert({ actor: context.userId, actor_email: context.claims?.email ?? null, action: "combination.delete", detail: `Deleted combination ${data.id}` });
     return { ok: true };
   });
 
@@ -823,7 +844,17 @@ export const saveCalendarEvent = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { sync_google, id, end_time, ...fields } = data;
     let providerId: string | null = null;
-    if (sync_google && !id) {
+    let existingProviderId: string | null = null;
+    if (id) {
+      const { data: existing, error } = await context.supabase.from("crm_events").select("google_calendar_event_id").eq("id", id).maybeSingle();
+      if (error) throw new Error(error.message);
+      existingProviderId = existing?.google_calendar_event_id ?? null;
+    }
+    if (sync_google && existingProviderId) {
+      const calendar = await import("@/lib/calendar.server");
+      await calendar.updatePrimaryEvent(existingProviderId, { title: data.title, notes: data.notes, start_time: data.start_time, end_time: end_time ?? null });
+      providerId = existingProviderId;
+    } else if (sync_google && !id) {
       const calendar = await import("@/lib/calendar.server");
       const providerEvent = await calendar.createPrimaryEvent({
         title: data.title,
@@ -845,13 +876,14 @@ export const saveCalendarEvent = createServerFn({ method: "POST" })
       ? await supabaseAdmin.from("crm_events").update(payload).eq("id", id)
       : await supabaseAdmin.from("crm_events").insert(payload);
     if (result.error) throw new Error(result.error.message);
+    await supabaseAdmin.from("activity_log").insert({ actor: context.userId, actor_email: context.claims?.email ?? null, action: id ? "calendar.update" : "calendar.create", detail: `${id ? "Updated" : "Added"} calendar event: ${data.title}` });
     return { ok: true };
   });
 
 export const deleteCalendarEvent = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ id: z.string().uuid(), google_calendar_event_id: z.string().nullable().optional() }).parse(d))
-  .handler(async ({ data }) => {
+  .handler(async ({ context, data }) => {
     if (data.google_calendar_event_id) {
       const calendar = await import("@/lib/calendar.server");
       await calendar.deletePrimaryEvent(data.google_calendar_event_id);
@@ -859,20 +891,22 @@ export const deleteCalendarEvent = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { error } = await supabaseAdmin.from("crm_events").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
+    await supabaseAdmin.from("activity_log").insert({ actor: context.userId, actor_email: context.claims?.email ?? null, action: "calendar.delete", detail: `Deleted calendar event ${data.id}` });
     return { ok: true };
   });
 
 export const getCrmOverview = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const [sales, collections, costing, contacts, events] = await Promise.all([
+    const [sales, collections, costing, contacts, events, activity] = await Promise.all([
       context.supabase.from("sales").select("amount, sale_date, month, collection_slug"),
       context.supabase.from("collections").select("slug, name").order("sort_order"),
       context.supabase.from("collection_costing").select("collection_slug, total_cost"),
       context.supabase.from("contacts").select("id, type, name, company, email").order("name").limit(8),
       context.supabase.from("crm_events").select("*").gte("start_time", new Date().toISOString()).order("start_time").limit(12),
+      context.supabase.from("activity_log").select("actor_email, action, detail, created_at").order("created_at", { ascending: false }).limit(6),
     ]);
-    for (const result of [sales, collections, costing, contacts, events]) {
+    for (const result of [sales, collections, costing, contacts, events, activity]) {
       if (result.error) throw new Error(result.error.message);
     }
     const quarters = new Map<string, Record<string, number>>();
@@ -895,6 +929,7 @@ export const getCrmOverview = createServerFn({ method: "GET" })
       costing: costing.data ?? [],
       contacts: contacts.data ?? [],
       events: events.data ?? [],
+      activity: activity.data ?? [],
     };
   });
 
