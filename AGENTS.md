@@ -10,3 +10,4 @@
 <!-- LOVABLE:END -->
 
 - Keep ware-level influencer stock, stock on sales, pricing, and remarks in `skus` because they are manual CRM attributes that sheet sync must preserve.
+- Keep product media in private Cloud Storage and expose short-lived signed links only through authenticated user sessions, protecting internal product assets.
