@@ -1,7 +1,7 @@
 import { Link, useRouter } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { RefreshCw, LogOut, LayoutGrid, Boxes, Users, CalendarDays, Shield } from "lucide-react";
+import { RefreshCw, LogOut, LayoutGrid, Boxes, Users, CalendarDays, Shield, Menu } from "lucide-react";
 import { toast } from "sonner";
 import type { ReactNode } from "react";
 
@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { getMe, syncNow } from "@/lib/savora.functions";
 import { relativeTime } from "@/lib/format";
+import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 
 export const meQueryKey = ["me"];
 
@@ -66,7 +67,7 @@ export function AppShell({
             <span className="label-caps hidden sm:inline">Inventory &amp; Sales</span>
           </Link>
 
-          <nav className="flex items-center gap-1">
+          <nav className="hidden items-center gap-1 md:flex">
             {navItems.map((item) => (
               <Link
                 key={item.to}
@@ -88,7 +89,16 @@ export function AppShell({
             </Link>
           </nav>
 
-          <div className="ml-auto flex items-center gap-3">
+          <div className="ml-auto flex items-center gap-2 sm:gap-3">
+            <Sheet>
+              <SheetTrigger asChild><Button variant="outline" size="icon" className="md:hidden" aria-label="Open navigation"><Menu className="size-4" /></Button></SheetTrigger>
+              <SheetContent side="left" className="w-72">
+                <SheetTitle className="mb-5 font-display text-xl">Savora CRM</SheetTitle>
+                <nav className="grid gap-1">
+                  {[...navItems, { to: "/admin", label: "Admin", icon: Shield }].map((item) => <Link key={item.to} to={item.to} className="flex min-h-11 items-center gap-3 rounded-md px-3 text-sm text-foreground hover:bg-secondary"><item.icon className="size-4" />{item.label}</Link>)}
+                </nav>
+              </SheetContent>
+            </Sheet>
             <div className="hidden text-right sm:block">
               <div className="label-caps">Last synced</div>
               <div className="num text-xs text-foreground">
@@ -105,7 +115,7 @@ export function AppShell({
               className="gap-2"
             >
               <RefreshCw className={`size-4 ${sync.isPending ? "animate-spin" : ""}`} />
-              {sync.isPending ? "Syncing" : "Sync now"}
+              <span className="hidden sm:inline">{sync.isPending ? "Syncing" : "Sync now"}</span>
             </Button>
             <div className="flex items-center gap-2">
               <Badge variant="secondary" className="capitalize">

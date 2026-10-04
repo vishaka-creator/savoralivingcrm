@@ -477,6 +477,7 @@ export type Database = {
           dimensions_catalogue: string | null
           id: string
           image_url: string | null
+          influencer_remarks: string | null
           influencer_stock: number
           mrp: number | null
           name: string
@@ -486,11 +487,13 @@ export type Database = {
           product_name: string | null
           remarks: string | null
           shopify_product_id: string | null
+          showroom_remarks: string | null
           sold_pcs: number
           sold_sets: number
           sort_order: number | null
           store_stock: number
           unit: string
+          ware_media_path: string | null
         }
         Insert: {
           approx_weight_grams?: number | null
@@ -502,6 +505,7 @@ export type Database = {
           dimensions_catalogue?: string | null
           id?: string
           image_url?: string | null
+          influencer_remarks?: string | null
           influencer_stock?: number
           mrp?: number | null
           name: string
@@ -511,11 +515,13 @@ export type Database = {
           product_name?: string | null
           remarks?: string | null
           shopify_product_id?: string | null
+          showroom_remarks?: string | null
           sold_pcs?: number
           sold_sets?: number
           sort_order?: number | null
           store_stock?: number
           unit?: string
+          ware_media_path?: string | null
         }
         Update: {
           approx_weight_grams?: number | null
@@ -527,6 +533,7 @@ export type Database = {
           dimensions_catalogue?: string | null
           id?: string
           image_url?: string | null
+          influencer_remarks?: string | null
           influencer_stock?: number
           mrp?: number | null
           name?: string
@@ -536,11 +543,13 @@ export type Database = {
           product_name?: string | null
           remarks?: string | null
           shopify_product_id?: string | null
+          showroom_remarks?: string | null
           sold_pcs?: number
           sold_sets?: number
           sort_order?: number | null
           store_stock?: number
           unit?: string
+          ware_media_path?: string | null
         }
         Relationships: [
           {
