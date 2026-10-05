@@ -28,6 +28,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { deleteWare, updateWare } from "@/lib/savora.functions";
+import { supabase } from "@/integrations/supabase/client";
 
 export interface WareRow {
   id: string;
@@ -45,6 +46,10 @@ export interface WareRow {
   costPrice: number | null;
   mrp: number | null;
   remarks: string | null;
+  influencerRemarks?: string | null;
+  showroomRemarks?: string | null;
+  wareMediaPath?: string | null;
+  wareMediaUrl?: string | null;
 }
 
 const numOrNull = (v: string) => (v.trim() === "" ? null : Number(v));
@@ -70,14 +75,28 @@ export function WareRowActions({ ware }: { ware: WareRow }) {
     costPrice: ware.costPrice === null ? "" : String(ware.costPrice),
     mrp: ware.mrp === null ? "" : String(ware.mrp),
     remarks: ware.remarks ?? "",
+    influencerRemarks: ware.influencerRemarks ?? "",
+    showroomRemarks: ware.showroomRemarks ?? "",
   });
+  const [file, setFile] = useState<File | null>(null);
 
   const set = (key: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm((f) => ({ ...f, [key]: e.target.value }));
 
   const update = useMutation({
-    mutationFn: () =>
-      save({
+    mutationFn: async () => {
+      let mediaPath = ware.wareMediaPath ?? null;
+      if (file) {
+        const okType = ["image/jpeg", "application/pdf"].includes(file.type);
+        if (!okType) throw new Error("Please upload a JPEG image or a PDF");
+        if (file.size > 20 * 1024 * 1024) throw new Error("File must be under 20 MB");
+        const ext = file.type === "application/pdf" ? "pdf" : "jpg";
+        const path = `${ware.id}/${Date.now()}.${ext}`;
+        const { error } = await supabase.storage.from("savora-ware-media").upload(path, file, { contentType: file.type });
+        if (error) throw new Error(error.message);
+        mediaPath = path;
+      }
+      return save({
         data: {
           id: ware.id,
           name: form.name.trim(),
@@ -86,6 +105,7 @@ export function WareRowActions({ ware }: { ware: WareRow }) {
           product_name: form.productName.trim() || null,
           image_url: form.imageUrl.trim() || null,
           printed_image_url: form.printedImageUrl.trim() || null,
+          ware_media_path: mediaPath,
           ordered_quantity: numOrNull(form.orderedQuantity),
           approx_weight_grams: numOrNull(form.approxWeight),
           stock_in_hand: Number(form.stockInHand || 0),
@@ -94,8 +114,11 @@ export function WareRowActions({ ware }: { ware: WareRow }) {
           cost_price: numOrNull(form.costPrice),
           mrp: numOrNull(form.mrp),
           remarks: form.remarks.trim() || null,
+          influencer_remarks: form.influencerRemarks.trim() || null,
+          showroom_remarks: form.showroomRemarks.trim() || null,
         },
-      }),
+      });
+    },
     onSuccess: () => {
       toast.success("Ware updated");
       setOpen(false);
@@ -153,7 +176,7 @@ export function WareRowActions({ ware }: { ware: WareRow }) {
       </AlertDialog>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit ware</DialogTitle>
             <DialogDescription>
@@ -233,12 +256,26 @@ export function WareRowActions({ ware }: { ware: WareRow }) {
               onChange={set("mrp")}
             />
             <div className="space-y-1.5 sm:col-span-2">
-              <Label htmlFor="w-remarks">Remarks / where given</Label>
+              <Label htmlFor="w-file">Upload image or PDF (JPEG / PDF)</Label>
+              <Input id="w-file" type="file" accept="image/jpeg,.jpg,.jpeg,application/pdf,.pdf" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
+              {ware.wareMediaUrl && !file && (
+                <a href={ware.wareMediaUrl} target="_blank" rel="noreferrer" className="text-xs text-primary underline">View current file</a>
+              )}
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="w-inf-remarks">Given to influencers</Label>
+              <Textarea id="w-inf-remarks" value={form.influencerRemarks} onChange={(e) => setForm((c) => ({ ...c, influencerRemarks: e.target.value }))} placeholder="Which influencer, how many, when" />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="w-show-remarks">Showroom display</Label>
+              <Textarea id="w-show-remarks" value={form.showroomRemarks} onChange={(e) => setForm((c) => ({ ...c, showroomRemarks: e.target.value }))} placeholder="Which store / showroom, how many" />
+            </div>
+            <div className="space-y-1.5 sm:col-span-2">
+              <Label htmlFor="w-remarks">Other remarks</Label>
               <Textarea
                 id="w-remarks"
                 value={form.remarks}
                 onChange={(e) => setForm((current) => ({ ...current, remarks: e.target.value }))}
-                placeholder="Add who received this ware or where it was given"
               />
             </div>
           </div>
