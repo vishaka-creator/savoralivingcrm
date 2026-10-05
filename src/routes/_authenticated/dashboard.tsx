@@ -194,6 +194,20 @@ function Dashboard() {
         </div>
       </section>
 
+      <section className="panel mt-4 p-5" aria-labelledby="recent-activity-heading">
+        <p className="label-caps">Recent activity</p>
+        <h2 id="recent-activity-heading" className="mt-1 text-xl">Who updated last &amp; what</h2>
+        <ul className="mt-4 divide-y divide-border">
+          {(overview?.activity ?? []).map((item, index) => (
+            <li key={`${item.created_at}-${index}`} className="flex flex-col gap-1 py-2.5 text-sm sm:flex-row sm:items-center sm:justify-between">
+              <span><span className="font-medium">{item.actor_email ?? "System"}</span> <span className="text-muted-foreground">— {item.detail ?? item.action}</span></span>
+              <span className="text-xs text-muted-foreground">{new Date(item.created_at).toLocaleString()}</span>
+            </li>
+          ))}
+          {!overview?.activity.length && <li className="py-2 text-sm text-muted-foreground">No changes recorded yet.</li>}
+        </ul>
+      </section>
+
       <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {isPending
           ? Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-28" />)

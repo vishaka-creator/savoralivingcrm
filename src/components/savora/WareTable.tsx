@@ -36,6 +36,10 @@ export interface WareTableRow {
   costPrice: number | null;
   mrp: number | null;
   remarks: string | null;
+  influencerRemarks?: string | null;
+  showroomRemarks?: string | null;
+  wareMediaPath?: string | null;
+  wareMediaUrl?: string | null;
   stockInHand: number;
   threshold: number;
 }
@@ -426,7 +430,15 @@ function Cell({
     case "images":
       return (
         <TableCell>
-          <Thumb url={ware.imageUrl} alt={`${ware.ware} reference image`} />
+          {ware.wareMediaUrl ? (
+            ware.wareMediaPath?.endsWith(".pdf") ? (
+              <a href={ware.wareMediaUrl} target="_blank" rel="noreferrer" className="text-xs text-primary underline">PDF</a>
+            ) : (
+              <Thumb url={ware.wareMediaUrl} alt={`${ware.ware} uploaded image`} />
+            )
+          ) : (
+            <Thumb url={ware.imageUrl} alt={`${ware.ware} reference image`} />
+          )}
         </TableCell>
       );
     case "orderedQuantity":
@@ -456,7 +468,14 @@ function Cell({
     case "mrp":
       return <TableCell className="num text-right">{ware.mrp === null ? "—" : inr(ware.mrp)}</TableCell>;
     case "remarks":
-      return <TableCell className="min-w-56 max-w-72 whitespace-normal text-sm text-muted-foreground">{ware.remarks ?? "—"}</TableCell>;
+      return (
+        <TableCell className="min-w-56 max-w-72 whitespace-normal text-xs text-muted-foreground">
+          {ware.influencerRemarks && <p><span className="font-medium text-foreground">Influencers:</span> {ware.influencerRemarks}</p>}
+          {ware.showroomRemarks && <p><span className="font-medium text-foreground">Showroom:</span> {ware.showroomRemarks}</p>}
+          {ware.remarks && <p>{ware.remarks}</p>}
+          {!ware.influencerRemarks && !ware.showroomRemarks && !ware.remarks && "—"}
+        </TableCell>
+      );
     case "stock":
       return (
         <TableCell className="num text-right">
