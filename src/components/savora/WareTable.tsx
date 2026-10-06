@@ -53,8 +53,7 @@ type ColumnKey =
   | "orderedQuantity"
   | "printedImage"
   | "approxWeight"
-  | "soldSets"
-  | "soldPcs"
+  | "actualSales"
   | "influencerStock"
   | "storeStock"
   | "costPrice"
@@ -71,8 +70,7 @@ const COLUMN_LABELS: Record<ColumnKey, string> = {
   orderedQuantity: "Orderd Quantity",
   printedImage: "Final Printed Image",
   approxWeight: "Approx Weight (gm)",
-  soldSets: "Sales — Sets",
-  soldPcs: "Sales — Pcs",
+  actualSales: "Actual sales",
   influencerStock: "Influencer Stock",
   storeStock: "Stock on Sales",
   costPrice: "Cost Price",
@@ -90,8 +88,7 @@ const DEFAULT_ORDER: ColumnKey[] = [
   "orderedQuantity",
   "printedImage",
   "approxWeight",
-  "soldSets",
-  "soldPcs",
+  "actualSales",
   "influencerStock",
   "storeStock",
   "costPrice",
@@ -103,8 +100,7 @@ const DEFAULT_ORDER: ColumnKey[] = [
 const NUMERIC: ColumnKey[] = [
   "orderedQuantity",
   "approxWeight",
-  "soldSets",
-  "soldPcs",
+  "actualSales",
   "influencerStock",
   "storeStock",
   "costPrice",
@@ -231,7 +227,7 @@ export function WareTable({
           Drag a column header onto another to reorder columns (or focus a header and press the
           arrow keys) — the order is remembered on this device.
           {canEdit
-            ? " Rows can be dragged onto each other to reorder wares. Sales in sets and pieces are editable; saving reduces the stock in hand automatically."
+            ? " Rows can be dragged onto each other to reorder wares. Actual sales are entered in pieces; saving reduces stock in hand automatically."
             : ""}
         </p>
         {isCustom && (
@@ -455,10 +451,8 @@ function Cell({
           {ware.approxWeight === null ? "—" : num(ware.approxWeight)}
         </TableCell>
       );
-    case "soldSets":
-      return <SalesCell ware={ware} field="sets" canEdit={canEdit} />;
-    case "soldPcs":
-      return <SalesCell ware={ware} field="pcs" canEdit={canEdit} />;
+    case "actualSales":
+      return <SalesCell ware={ware} canEdit={canEdit} />;
     case "influencerStock":
       return <TableCell className="num text-right">{num(ware.influencerStock)}</TableCell>;
     case "storeStock":
@@ -492,16 +486,14 @@ function Cell({
 
 function SalesCell({
   ware,
-  field,
   canEdit,
 }: {
   ware: WareTableRow;
-  field: "sets" | "pcs";
   canEdit: boolean;
 }) {
   const queryClient = useQueryClient();
   const save = useServerFn(updateWareSales);
-  const current = field === "sets" ? ware.soldSets : ware.soldPcs;
+  const current = ware.soldSets * ware.piecesPerSet + ware.soldPcs;
   const [value, setValue] = useState(String(current));
 
   useEffect(() => {
@@ -509,15 +501,17 @@ function SalesCell({
   }, [current]);
 
   const mutation = useMutation({
-    mutationFn: (next: number) =>
-      save({
+    mutationFn: (next: number) => {
+      const piecesPerSet = Math.max(1, ware.piecesPerSet);
+      return save({
         data: {
           id: ware.id,
-          sold_sets: field === "sets" ? next : ware.soldSets,
-          sold_pcs: field === "pcs" ? next : ware.soldPcs,
-          pieces_per_set: ware.piecesPerSet,
+          sold_sets: Math.floor(next / piecesPerSet),
+          sold_pcs: next % piecesPerSet,
+          pieces_per_set: piecesPerSet,
         },
-      }),
+      });
+    },
     onSuccess: (res) => {
       const delta = res.piecesDelta ?? 0;
       toast.success(
@@ -559,14 +553,10 @@ function SalesCell({
         onKeyDown={(e) => {
           if (e.key === "Enter") e.currentTarget.blur();
         }}
-        aria-label={`${ware.ware} sales in ${field === "sets" ? "sets" : "pieces"}`}
+        aria-label={`${ware.ware} actual sales in pieces`}
         className="num ml-auto h-8 w-20 text-right"
       />
-      {field === "sets" && (
-        <span className="mt-0.5 block text-[10px] text-muted-foreground">
-          {num(ware.piecesPerSet)} pcs/set
-        </span>
-      )}
+      <span className="mt-0.5 block text-[10px] text-muted-foreground">pieces</span>
     </TableCell>
   );
 }

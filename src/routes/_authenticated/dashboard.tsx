@@ -346,10 +346,12 @@ function Dashboard() {
   );
 }
 
-function SalesChart({ wares }: { wares: Array<{ ware: string; soldSets: number; soldPcs: number; piecesPerSet: number }> }) {
+function SalesChart({ wares }: { wares: Array<{ ware: string; productName: string | null; soldSets: number; soldPcs: number; piecesPerSet: number }> }) {
   const chartData = wares
     .map((ware) => ({
-      name: ware.ware.length > 18 ? `${ware.ware.slice(0, 18)}…` : ware.ware,
+      name: (ware.productName?.trim() || ware.ware).length > 18
+        ? `${(ware.productName?.trim() || ware.ware).slice(0, 18)}…`
+        : ware.productName?.trim() || ware.ware,
       sales: ware.soldSets * ware.piecesPerSet + ware.soldPcs,
     }))
     .sort((a, b) => b.sales - a.sales)
