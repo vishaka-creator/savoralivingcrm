@@ -11,3 +11,4 @@
 - [x] Show the latest editor and change on Overview
 - [x] Improve desktop/mobile layouts across the CRM
 - [x] Add calendar event editing with Google Calendar updates
+- [x] Replace separate sales sets/pieces columns with editable Actual sales in pieces, and use product names in the top-five chart
