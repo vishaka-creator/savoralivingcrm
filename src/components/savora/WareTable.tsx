@@ -67,7 +67,7 @@ const COLUMN_LABELS: Record<ColumnKey, string> = {
   dimensionsCatalogue: "Dimension in Catalogue",
   productName: "Product Name",
   images: "Images",
-  orderedQuantity: "Orderd Quantity",
+  orderedQuantity: "Ordered Quantity",
   printedImage: "Final Printed Image",
   approxWeight: "Approx Weight (gm)",
   actualSales: "Actual sales",

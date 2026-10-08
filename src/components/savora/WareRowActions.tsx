@@ -207,7 +207,7 @@ export function WareRowActions({ ware }: { ware: WareRow }) {
               onChange={set("printedImageUrl")}
             />
             <Field
-              label="Orderd Quantity"
+              label="Ordered Quantity"
               id="w-ordered"
               type="number"
               value={form.orderedQuantity}
