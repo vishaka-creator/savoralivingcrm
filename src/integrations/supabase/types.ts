@@ -486,6 +486,7 @@ export type Database = {
           printed_image_url: string | null
           product_name: string | null
           remarks: string | null
+          sales_remarks: string | null
           shopify_product_id: string | null
           showroom_remarks: string | null
           sold_pcs: number
@@ -514,6 +515,7 @@ export type Database = {
           printed_image_url?: string | null
           product_name?: string | null
           remarks?: string | null
+          sales_remarks?: string | null
           shopify_product_id?: string | null
           showroom_remarks?: string | null
           sold_pcs?: number
@@ -542,6 +544,7 @@ export type Database = {
           printed_image_url?: string | null
           product_name?: string | null
           remarks?: string | null
+          sales_remarks?: string | null
           shopify_product_id?: string | null
           showroom_remarks?: string | null
           sold_pcs?: number

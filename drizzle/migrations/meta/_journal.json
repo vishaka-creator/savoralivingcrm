@@ -15,6 +15,13 @@
       "when": 1791130231020,
       "tag": "0001_add_ware_media_and_remarks",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791788962790,
+      "tag": "0002_add_sku_sales_remarks",
+      "breakpoints": true
     }
   ]
 }
