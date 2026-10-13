@@ -43,7 +43,7 @@ export const getDashboard = createServerFn({ method: "GET" })
       supabase
         .from("skus")
         .select(
-          "id, collection_slug, name, code, unit, ordered_quantity, approx_weight_grams, dimensions, dimensions_catalogue, product_name, image_url, printed_image_url, ware_media_path, influencer_remarks, showroom_remarks, pieces_per_set, sold_sets, sold_pcs, influencer_stock, store_stock, cost_price, mrp, remarks",
+          "id, collection_slug, name, code, unit, ordered_quantity, approx_weight_grams, dimensions, dimensions_catalogue, product_name, image_url, printed_image_url, ware_media_path, influencer_remarks, showroom_remarks, sales_remarks, pieces_per_set, influencer_stock, store_stock, cost_price, mrp, remarks",
         )
         .order("sort_order", { ascending: true, nullsFirst: false })
         .order("name"),
@@ -118,13 +118,12 @@ export const getDashboard = createServerFn({ method: "GET" })
             wareMediaUrl: s.ware_media_path ? mediaUrls.get(s.ware_media_path) ?? null : null,
             orderedQuantity: s.ordered_quantity === null ? null : Number(s.ordered_quantity),
             piecesPerSet: Number(s.pieces_per_set ?? 4),
-            soldSets: Number(s.sold_sets ?? 0),
-            soldPcs: Number(s.sold_pcs ?? 0),
             influencerStock: Number(s.influencer_stock ?? 0),
             storeStock: Number(s.store_stock ?? 0),
             costPrice: s.cost_price === null ? null : Number(s.cost_price),
             mrp: s.mrp === null ? null : Number(s.mrp),
             remarks: s.remarks,
+            salesRemarks: s.sales_remarks,
             influencerRemarks: s.influencer_remarks,
             showroomRemarks: s.showroom_remarks,
             stockInHand: Number(m?.quantity_on_hand ?? 0),
@@ -634,6 +633,35 @@ export const updateWareSales = createServerFn({ method: "POST" })
     });
 
     return { ok: true, stockInHand: stock, piecesDelta: delta };
+  });
+
+export const updateWareSalesRemarks = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) =>
+    z.object({ id: z.string().uuid(), sales_remarks: nullableText(2000) }).parse(d),
+  )
+  .handler(async ({ context, data }) => {
+    await assertAdmin(context);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: ware, error: lookupError } = await supabaseAdmin
+      .from("skus")
+      .select("name")
+      .eq("id", data.id)
+      .maybeSingle();
+    if (lookupError) throw new Error(lookupError.message);
+    if (!ware) throw new Error("Ware not found");
+    const { error } = await supabaseAdmin
+      .from("skus")
+      .update({ sales_remarks: data.sales_remarks ?? null })
+      .eq("id", data.id);
+    if (error) throw new Error(error.message);
+    await supabaseAdmin.from("activity_log").insert({
+      actor: context.userId,
+      actor_email: context.claims?.email ?? null,
+      action: "ware.sales_remarks",
+      detail: `Updated Sales remarks for ${ware.name}`,
+    });
+    return { ok: true };
   });
 
 
