@@ -31,6 +31,7 @@ export interface WareTableRow {
   piecesPerSet: number;
   soldSets: number;
   soldPcs: number;
+  salesRemarks: string | null;
   influencerStock: number;
   storeStock: number;
   costPrice: number | null;
