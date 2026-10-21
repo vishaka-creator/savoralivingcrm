@@ -5,29 +5,40 @@
  * are excluded from the sheet sync per spec — they live in the CRM and are
  * edited in-app; existing rows are left untouched.
  */
-import { COLLECTIONS, DEFAULT_LOW_STOCK_THRESHOLD } from "./savora-config";
+import { COLLECTIONS, DEFAULT_LOW_STOCK_THRESHOLD, type CollectionSlug } from "./savora-config";
 import { fetchSnapshot } from "./sheets.server";
 
 export interface SyncResult {
   ok: boolean;
   syncedAt: string;
   counts: { wares: number };
+  /** Collections that were refreshed in this run. */
+  collections: string[];
   message?: string;
 }
 
 export async function runSheetSync(opts: {
   actor?: string | null;
   actorEmail?: string | null;
+  /** Limit the sync to these collections; omit for all five. */
+  collections?: CollectionSlug[];
 }): Promise<SyncResult> {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const syncedAt = new Date().toISOString();
+  const targets = opts.collections?.length
+    ? COLLECTIONS.filter((c) => opts.collections!.includes(c.slug))
+    : COLLECTIONS;
+  const names = targets.map((c) => c.name);
+  const scopeLabel = targets.length === COLLECTIONS.length ? "all collections" : names.join(", ");
 
   try {
-    const snapshot = await fetchSnapshot();
+    const snapshot = await fetchSnapshot(targets.map((c) => c.slug));
     let skuCount = 0;
 
-    for (const c of COLLECTIONS) {
+    for (const c of targets) {
       const bundle = snapshot.perCollection[c.slug];
+      if (!bundle) continue;
+
 
       // --- SKUs + raw material stock -------------------------------------
       const skuRows = bundle.products
