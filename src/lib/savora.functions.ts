@@ -7,7 +7,7 @@ import {
   monthName as currentMonthName,
   previousMonthName,
 } from "@/lib/savora-logic";
-import { assertAdmin } from "@/lib/savora-admin.server";
+import { assertAdmin, isAdminUser } from "@/lib/savora-admin.server";
 
 const slugSchema = z.object({ slug: z.string().min(1).max(40) });
 
@@ -17,6 +17,7 @@ export const getMe = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { supabase, userId } = context;
+    const isAdmin = await isAdminUser(context);
     const { data: profile } = await supabase
       .from("profiles")
       .select("id, name, email")
@@ -26,8 +27,8 @@ export const getMe = createServerFn({ method: "GET" })
       userId,
       name: profile?.name ?? null,
       email: profile?.email ?? null,
-      isAdmin: true,
-      role: "admin" as const,
+      isAdmin,
+      role: isAdmin ? ("admin" as const) : ("viewer" as const),
     };
   });
 
@@ -349,6 +350,7 @@ export const getCrmItems = createServerFn({ method: "GET" })
 export const getAdminOverview = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
+    await assertAdmin(context);
     const { supabase } = context;
     const [profiles, roles, syncLog, activity] = await Promise.all([
       supabase.from("profiles").select("id, name, email, created_at").order("created_at"),
@@ -738,6 +740,7 @@ export const saveContact = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => contactSchema.parse(d))
   .handler(async ({ context, data }) => {
+    await assertAdmin(context);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { id, ...fields } = data;
     const payload = { ...fields, created_by: context.userId, updated_by: context.userId };
@@ -758,6 +761,7 @@ export const deleteContact = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ context, data }) => {
+    await assertAdmin(context);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { error } = await supabaseAdmin.from("contacts").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
@@ -817,6 +821,7 @@ export const saveCosting = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => costingSchema.parse(d))
   .handler(async ({ context, data }) => {
+    await assertAdmin(context);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { id, material_cost, box_cost, ...fields } = data;
     const payload = {
@@ -839,6 +844,7 @@ export const deleteCosting = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ context, data }) => {
+    await assertAdmin(context);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { error } = await supabaseAdmin.from("collection_costing").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
@@ -850,6 +856,7 @@ export const saveCombination = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => comboSchema.parse(d))
   .handler(async ({ context, data }) => {
+    await assertAdmin(context);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { id, ...fields } = data;
     const payload = { ...fields, updated_by: context.userId, ...(id ? {} : { created_by: context.userId }) };
@@ -865,6 +872,7 @@ export const deleteCombination = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ context, data }) => {
+    await assertAdmin(context);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { error } = await supabaseAdmin.from("special_combinations").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
@@ -895,6 +903,7 @@ export const saveCalendarEvent = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => eventSchema.parse(d))
   .handler(async ({ context, data }) => {
+    await assertAdmin(context);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { sync_google, id, end_time, ...fields } = data;
     let providerId: string | null = null;
@@ -938,6 +947,7 @@ export const deleteCalendarEvent = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ id: z.string().uuid(), google_calendar_event_id: z.string().nullable().optional() }).parse(d))
   .handler(async ({ context, data }) => {
+    await assertAdmin(context);
     if (data.google_calendar_event_id) {
       const calendar = await import("@/lib/calendar.server");
       await calendar.deletePrimaryEvent(data.google_calendar_event_id);
@@ -1055,6 +1065,7 @@ export const saveBuildPlan = createServerFn({ method: "POST" })
       .parse(d),
   )
   .handler(async ({ context, data }) => {
+    await assertAdmin(context);
     const email = (context.claims?.email as string | undefined) ?? null;
     const { error } = await context.supabase.from("build_plans").upsert(
       {
