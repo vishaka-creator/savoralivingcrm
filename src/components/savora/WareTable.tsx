@@ -15,7 +15,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { WareRowActions } from "@/components/savora/WareRowActions";
-import { updateWareSales } from "@/lib/savora.functions";
+import { updateWareStock } from "@/lib/savora.functions";
+
+export const LOW_STOCK_PCS = 5;
 import { inr, num } from "@/lib/format";
 
 export interface WareTableRow {
@@ -54,7 +56,7 @@ type ColumnKey =
   | "orderedQuantity"
   | "printedImage"
   | "approxWeight"
-  | "actualSales"
+  | "setsBuildable"
   | "influencerStock"
   | "storeStock"
   | "costPrice"
@@ -71,7 +73,7 @@ const COLUMN_LABELS: Record<ColumnKey, string> = {
   orderedQuantity: "Ordered Quantity",
   printedImage: "Final Printed Image",
   approxWeight: "Approx Weight (gm)",
-  actualSales: "Actual sales",
+  setsBuildable: "Sets can be made",
   influencerStock: "Influencer Stock",
   storeStock: "Stock on Sales",
   costPrice: "Cost Price",
@@ -89,7 +91,7 @@ const DEFAULT_ORDER: ColumnKey[] = [
   "orderedQuantity",
   "printedImage",
   "approxWeight",
-  "actualSales",
+  "setsBuildable",
   "influencerStock",
   "storeStock",
   "costPrice",
@@ -101,7 +103,7 @@ const DEFAULT_ORDER: ColumnKey[] = [
 const NUMERIC: ColumnKey[] = [
   "orderedQuantity",
   "approxWeight",
-  "actualSales",
+  "setsBuildable",
   "influencerStock",
   "storeStock",
   "costPrice",
@@ -117,7 +119,7 @@ function loadOrder(): ColumnKey[] {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) return DEFAULT_ORDER;
     const parsed = JSON.parse(raw) as string[];
-    const kept = parsed.filter((k): k is ColumnKey => DEFAULT_ORDER.includes(k as ColumnKey));
+    const kept = parsed.map((k) => (k === "actualSales" ? "setsBuildable" : k)).filter((k): k is ColumnKey => DEFAULT_ORDER.includes(k as ColumnKey));
     const missing = DEFAULT_ORDER.filter((k) => !kept.includes(k));
     return [...kept, ...missing];
   } catch {
@@ -228,7 +230,7 @@ export function WareTable({
           Drag a column header onto another to reorder columns (or focus a header and press the
           arrow keys) — the order is remembered on this device.
           {canEdit
-            ? " Rows can be dragged onto each other to reorder wares. Actual sales are entered in pieces; saving reduces stock in hand automatically."
+            ? " Rows can be dragged onto each other to reorder wares. Sets can be made is stock ÷ pieces per set; editing it updates stock in hand."
             : ""}
         </p>
         {isCustom && (
@@ -452,8 +454,8 @@ function Cell({
           {ware.approxWeight === null ? "—" : num(ware.approxWeight)}
         </TableCell>
       );
-    case "actualSales":
-      return <SalesCell ware={ware} canEdit={canEdit} />;
+    case "setsBuildable":
+      return <SetsCell ware={ware} canEdit={canEdit} />;
     case "influencerStock":
       return <TableCell className="num text-right">{num(ware.influencerStock)}</TableCell>;
     case "storeStock":
@@ -475,7 +477,7 @@ function Cell({
       return (
         <TableCell className="num text-right">
           <span className="inline-flex items-center gap-1.5">
-            {ware.stockInHand <= ware.threshold && (
+            {ware.stockInHand < LOW_STOCK_PCS && (
               <AlertTriangle className="size-3.5 text-warning" />
             )}
             {num(ware.stockInHand)}
@@ -485,16 +487,11 @@ function Cell({
   }
 }
 
-function SalesCell({
-  ware,
-  canEdit,
-}: {
-  ware: WareTableRow;
-  canEdit: boolean;
-}) {
+function SetsCell({ ware, canEdit }: { ware: WareTableRow; canEdit: boolean }) {
   const queryClient = useQueryClient();
-  const save = useServerFn(updateWareSales);
-  const current = ware.soldSets * ware.piecesPerSet + ware.soldPcs;
+  const save = useServerFn(updateWareStock);
+  const perSet = Math.max(1, ware.piecesPerSet);
+  const current = Math.floor(ware.stockInHand / perSet);
   const [value, setValue] = useState(String(current));
 
   useEffect(() => {
@@ -502,24 +499,10 @@ function SalesCell({
   }, [current]);
 
   const mutation = useMutation({
-    mutationFn: (next: number) => {
-      const piecesPerSet = Math.max(1, ware.piecesPerSet);
-      return save({
-        data: {
-          id: ware.id,
-          sold_sets: Math.floor(next / piecesPerSet),
-          sold_pcs: next % piecesPerSet,
-          pieces_per_set: piecesPerSet,
-        },
-      });
-    },
-    onSuccess: (res) => {
-      const delta = res.piecesDelta ?? 0;
-      toast.success(
-        delta === 0
-          ? "Sales updated"
-          : `Sales updated · stock ${delta > 0 ? "reduced" : "restored"} by ${Math.abs(delta)} pcs`,
-      );
+    mutationFn: (sets: number) =>
+      save({ data: { id: ware.id, stock_in_hand: sets * perSet + (ware.stockInHand % perSet) } }),
+    onSuccess: () => {
+      toast.success("Saved · stock updated");
       queryClient.invalidateQueries();
     },
     onError: (e: Error) => {
@@ -530,7 +513,7 @@ function SalesCell({
 
   const commit = () => {
     const next = Number(value);
-    if (!Number.isFinite(next) || next < 0) {
+    if (!Number.isInteger(next) || next < 0) {
       setValue(String(current));
       return;
     }
@@ -554,10 +537,10 @@ function SalesCell({
         onKeyDown={(e) => {
           if (e.key === "Enter") e.currentTarget.blur();
         }}
-        aria-label={`${ware.ware} actual sales in pieces`}
+        aria-label={`${ware.ware} sets can be made`}
         className="num ml-auto h-8 w-20 text-right"
       />
-      <span className="mt-0.5 block text-[10px] text-muted-foreground">pieces</span>
+      <span className="mt-0.5 block text-[10px] text-muted-foreground">sets of {perSet}</span>
     </TableCell>
   );
 }

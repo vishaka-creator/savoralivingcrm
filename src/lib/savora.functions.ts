@@ -43,7 +43,7 @@ export const getDashboard = createServerFn({ method: "GET" })
       supabase
         .from("skus")
         .select(
-          "id, collection_slug, name, code, unit, ordered_quantity, approx_weight_grams, dimensions, dimensions_catalogue, product_name, image_url, printed_image_url, ware_media_path, influencer_remarks, showroom_remarks, sales_remarks, pieces_per_set, influencer_stock, store_stock, cost_price, mrp, remarks",
+          "id, collection_slug, name, code, unit, ordered_quantity, approx_weight_grams, dimensions, dimensions_catalogue, product_name, image_url, printed_image_url, ware_media_path, influencer_remarks, showroom_remarks, sales_remarks, pieces_per_set, sold_sets, sold_pcs, influencer_stock, store_stock, cost_price, mrp, remarks",
         )
         .order("sort_order", { ascending: true, nullsFirst: false })
         .order("name"),
@@ -118,6 +118,8 @@ export const getDashboard = createServerFn({ method: "GET" })
             wareMediaUrl: s.ware_media_path ? mediaUrls.get(s.ware_media_path) ?? null : null,
             orderedQuantity: s.ordered_quantity === null ? null : Number(s.ordered_quantity),
             piecesPerSet: Number(s.pieces_per_set ?? 4),
+            soldSets: Number(s.sold_sets ?? 0),
+            soldPcs: Number(s.sold_pcs ?? 0),
             influencerStock: Number(s.influencer_stock ?? 0),
             storeStock: Number(s.store_stock ?? 0),
             costPrice: s.cost_price === null ? null : Number(s.cost_price),
@@ -564,6 +566,28 @@ export const updateWare = createServerFn({ method: "POST" })
       actor_email: context.claims?.email ?? null,
       action: "ware.update",
       detail: `Updated ware ${data.name}`,
+    });
+    return { ok: true };
+  });
+
+export const updateWareStock = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) =>
+    z.object({ id: z.string().uuid(), stock_in_hand: z.number().int().min(0).max(1000000) }).parse(d),
+  )
+  .handler(async ({ context, data }) => {
+    await assertAdmin(context);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin
+      .from("raw_materials")
+      .update({ quantity_on_hand: data.stock_in_hand })
+      .eq("sku_id", data.id);
+    if (error) throw new Error(error.message);
+    await supabaseAdmin.from("activity_log").insert({
+      actor: context.userId,
+      actor_email: context.claims?.email ?? null,
+      action: "ware.stock",
+      detail: `Set stock to ${data.stock_in_hand} pcs`,
     });
     return { ok: true };
   });
