@@ -7,6 +7,7 @@ import {
   ArrowRight,
   Boxes,
   BarChart3,
+  Pencil,
   Plus,
   PackageCheck,
   TrendingUp,
