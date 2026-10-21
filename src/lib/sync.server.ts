@@ -1,33 +1,70 @@
 /**
  * Writes the Google Sheet snapshot into the database (server-only).
  *
- * Only the five collection tabs are synced. Sales, expenses and box stock
- * are excluded from the sheet sync per spec — they live in the CRM and are
- * edited in-app; existing rows are left untouched.
+ * Only collection ware-list tabs (plus the built-in production-cost tabs) are
+ * synced. Every collection in the CRM is synced from its saved sheet tab, so
+ * collections added in-app (e.g. Parakeet) sync too. Sales, expenses and box
+ * stock are excluded from the sheet sync per spec — existing rows are left
+ * untouched.
  */
 import { COLLECTIONS, DEFAULT_LOW_STOCK_THRESHOLD } from "./savora-config";
-import { fetchSnapshot } from "./sheets.server";
+import { fetchSnapshot, type SyncTarget } from "./sheets.server";
 
 export interface SyncResult {
   ok: boolean;
   syncedAt: string;
   counts: { wares: number };
+  /** Collections that were refreshed in this run. */
+  collections: string[];
+  /** Collections skipped because their sheet tab was not found. */
+  missingTabs: string[];
   message?: string;
 }
 
 export async function runSheetSync(opts: {
   actor?: string | null;
   actorEmail?: string | null;
+  /** Limit the sync to these collection slugs; omit for every collection. */
+  collections?: string[] | undefined;
 }): Promise<SyncResult> {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const syncedAt = new Date().toISOString();
+  let names: string[] = [];
+  let scopeLabel = "all collections";
 
   try {
-    const snapshot = await fetchSnapshot();
+    const { data: rows, error: colErr } = await supabaseAdmin
+      .from("collections")
+      .select("slug, name, sheet_tab")
+      .order("sort_order");
+    if (colErr) throw new Error(`collections: ${colErr.message}`);
+
+    const all: SyncTarget[] = (rows ?? []).map((r) => {
+      const builtIn = COLLECTIONS.find((c) => c.slug === r.slug);
+      return {
+        slug: r.slug,
+        name: r.name,
+        sheetTab: builtIn?.sheetTab ?? r.sheet_tab ?? r.name,
+        costTab: builtIn?.costTab ?? null,
+      };
+    });
+    const targets = opts.collections?.length
+      ? all.filter((c) => opts.collections!.includes(c.slug))
+      : all;
+    if (!targets.length) throw new Error("That collection doesn't exist in the CRM.");
+    names = targets.map((c) => c.name);
+    if (opts.collections?.length) scopeLabel = names.join(", ");
+
+    const snapshot = await fetchSnapshot(targets);
+    if (snapshot.missingTabs.length === targets.length) {
+      throw new Error(`Sheet tab not found for ${snapshot.missingTabs.join("; ")}`);
+    }
     let skuCount = 0;
 
-    for (const c of COLLECTIONS) {
+    for (const c of targets) {
       const bundle = snapshot.perCollection[c.slug];
+      if (!bundle) continue;
+
 
       // --- SKUs + raw material stock -------------------------------------
       const skuRows = bundle.products
@@ -87,7 +124,7 @@ export async function runSheetSync(opts: {
 
     await supabaseAdmin.from("sync_log").insert({
       source: "sheets",
-      tab_or_endpoint: `${snapshot.tabsRead.length} tabs`,
+      tab_or_endpoint: `${scopeLabel} (${snapshot.tabsRead.length} tabs)`.slice(0, 200),
       synced_at: syncedAt,
       row_count: skuCount,
       status: "ok",
@@ -97,7 +134,7 @@ export async function runSheetSync(opts: {
         actor: opts.actor,
         actor_email: opts.actorEmail ?? null,
         action: "sync.sheets",
-        detail: `Synced ${skuCount} wares from ${snapshot.tabsRead.length} collection tabs`,
+        detail: `Synced ${skuCount} wares from ${scopeLabel}`,
       });
     }
 
@@ -105,13 +142,15 @@ export async function runSheetSync(opts: {
       ok: true,
       syncedAt,
       counts: { wares: skuCount },
+      collections: names,
+      missingTabs: snapshot.missingTabs,
     };
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown sync error";
     console.error("Sheet sync failed:", message);
     await supabaseAdmin.from("sync_log").insert({
       source: "sheets",
-      tab_or_endpoint: "batchGet",
+      tab_or_endpoint: `batchGet: ${scopeLabel}`.slice(0, 200),
       synced_at: syncedAt,
       row_count: 0,
       status: "error",
@@ -121,6 +160,8 @@ export async function runSheetSync(opts: {
       ok: false,
       syncedAt,
       counts: { wares: 0 },
+      collections: names,
+      missingTabs: [],
       message,
     };
   }

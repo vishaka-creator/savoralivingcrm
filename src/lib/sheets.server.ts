@@ -9,7 +9,6 @@ import {
   COLLECTIONS,
   HEADER_KEYWORDS,
   SPREADSHEET_ID,
-  type CollectionSlug,
 } from "./savora-config";
 
 const GATEWAY = "https://connector-gateway.lovable.dev/google_sheets/v4";
@@ -31,21 +30,35 @@ export interface ProductRow {
 }
 
 
-async function batchGet(ranges: string[]): Promise<Row[][]> {
+function gatewayHeaders(): Record<string, string> {
   const lovableKey = process.env["LOVABLE_API_KEY"];
   const connKey = process.env["GOOGLE_SHEETS_API_KEY"];
   if (!lovableKey || !connKey) {
     throw new Error("Google Sheets connection is not configured for this project.");
   }
+  return { Authorization: `Bearer ${lovableKey}`, "X-Connection-Api-Key": connKey };
+}
+
+/** Live list of tab names in the workbook. */
+export async function listSheetTabs(): Promise<string[]> {
+  const res = await fetch(
+    `${GATEWAY}/spreadsheets/${SPREADSHEET_ID}?fields=sheets.properties.title`,
+    { headers: gatewayHeaders() },
+  );
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`Google Sheets request failed [${res.status}]: ${body}`);
+  }
+  const json = (await res.json()) as { sheets?: { properties?: { title?: string } }[] };
+  return (json.sheets ?? []).map((s) => s.properties?.title ?? "").filter(Boolean);
+}
+
+async function batchGet(ranges: string[]): Promise<Row[][]> {
+  if (!ranges.length) return [];
   const qs = ranges.map((r) => `ranges=${encodeURIComponent(r)}`).join("&");
   const res = await fetch(
     `${GATEWAY}/spreadsheets/${SPREADSHEET_ID}/values:batchGet?${qs}&valueRenderOption=UNFORMATTED_VALUE`,
-    {
-      headers: {
-        Authorization: `Bearer ${lovableKey}`,
-        "X-Connection-Api-Key": connKey,
-      },
-    },
+    { headers: gatewayHeaders() },
   );
   if (!res.ok) {
     const body = await res.text();
@@ -145,8 +158,10 @@ const normalise = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
 /* --------------------------------- fetch -------------------------------- */
 
 export interface SheetSnapshot {
-  perCollection: Record<CollectionSlug, { products: ProductRow[] }>;
+  perCollection: Record<string, { products: ProductRow[] }>;
   tabsRead: string[];
+  /** Collections whose ware-list tab was not found in the workbook. */
+  missingTabs: string[];
 }
 
 /** A1 range with the sheet name safely quoted (escapes embedded quotes). */
@@ -155,21 +170,57 @@ export function toA1Range(sheetName: string, cellRange: string): string {
   return `'${escaped}'!${cellRange}`;
 }
 
-export async function fetchSnapshot(): Promise<SheetSnapshot> {
-  // Only the five collection tabs (ware list + production cost) are synced;
+export interface SyncTarget {
+  slug: string;
+  name: string;
+  /** Ware-list tab name as stored in the CRM (matched to the live tab ignoring case/spaces). */
+  sheetTab: string;
+  /** Optional production-cost tab used to fill missing ware details. */
+  costTab: string | null;
+}
+
+/** Default targets: the five built-in collections. */
+export const DEFAULT_TARGETS: SyncTarget[] = COLLECTIONS.map((c) => ({
+  slug: c.slug,
+  name: c.name,
+  sheetTab: c.sheetTab,
+  costTab: c.costTab,
+}));
+
+const tabKey = (s: string) => s.trim().toLowerCase().replace(/\s+/g, " ");
+
+/**
+ * Read the ware-list tab (and cost tab, when there is one) for each target.
+ * Tab names are resolved against the live workbook so "Parakeet" finds
+ * "PARAKEET". Targets whose ware-list tab is missing are reported, not read.
+ */
+export async function fetchSnapshot(targets: SyncTarget[] = DEFAULT_TARGETS): Promise<SheetSnapshot> {
+  // Only collection tabs (ware list + production cost) are synced;
   // ledger, boxes-stock and sales tabs are excluded per spec.
+  const live = await listSheetTabs();
+  const liveByKey = new Map(live.map((t) => [tabKey(t), t]));
+
   const ranges: string[] = [];
-  for (const c of COLLECTIONS) {
-    ranges.push(toA1Range(c.sheetTab, "A1:N200"));
-    ranges.push(toA1Range(c.costTab, "A1:N200"));
+  const plan: { target: SyncTarget; stockIdx: number; costIdx: number | null }[] = [];
+  const missingTabs: string[] = [];
+  for (const t of targets) {
+    const stockTab = liveByKey.get(tabKey(t.sheetTab));
+    if (!stockTab) {
+      missingTabs.push(`${t.name}: "${t.sheetTab}"`);
+      continue;
+    }
+    const stockIdx = ranges.push(toA1Range(stockTab, "A1:N200")) - 1;
+    const costTab = t.costTab ? liveByKey.get(tabKey(t.costTab)) : undefined;
+    const costIdx = costTab ? ranges.push(toA1Range(costTab, "A1:N200")) - 1 : null;
+    plan.push({ target: t, stockIdx, costIdx });
   }
 
   const grids = await batchGet(ranges);
 
-  const perCollection = {} as SheetSnapshot["perCollection"];
-  COLLECTIONS.forEach((c, i) => {
-    const stockRows = parseProducts(grids[i * 2] ?? []);
-    const costRows = parseProducts(grids[i * 2 + 1] ?? []);
+  const perCollection: SheetSnapshot["perCollection"] = {};
+  plan.forEach(({ target: c, stockIdx, costIdx }) => {
+    const stockRows = parseProducts(grids[stockIdx] ?? []);
+    const costRows = costIdx === null ? [] : parseProducts(grids[costIdx] ?? []);
     const costByKey = new Map<string, ProductRow>();
     for (const r of costRows) {
       if (r.code) costByKey.set(normalise(r.code), r);
@@ -195,7 +246,6 @@ export async function fetchSnapshot(): Promise<SheetSnapshot> {
         image: prev?.image ?? r.image ?? match?.image ?? null,
         printedImage: prev?.printedImage ?? r.printedImage ?? match?.printedImage ?? null,
       });
-
     };
     stockRows.forEach(upsert);
     // Cost tabs sometimes hold wares the collection tab omits.
@@ -207,5 +257,6 @@ export async function fetchSnapshot(): Promise<SheetSnapshot> {
   return {
     perCollection,
     tabsRead: ranges.map((r) => r.slice(1, r.indexOf("'!", 1))),
+    missingTabs,
   };
 }

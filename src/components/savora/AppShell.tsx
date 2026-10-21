@@ -1,16 +1,32 @@
 import { Link, useRouter } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { RefreshCw, LogOut, LayoutGrid, Boxes, Users, CalendarDays, Shield, Menu, Sparkles } from "lucide-react";
+import { RefreshCw, LogOut, LayoutGrid, Boxes, Users, CalendarDays, Shield, Menu, Sparkles, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 import type { ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { supabase } from "@/integrations/supabase/client";
-import { getMe, syncNow } from "@/lib/savora.functions";
+import { getMe, listSyncCollections, syncNow } from "@/lib/savora.functions";
 import { relativeTime } from "@/lib/format";
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+
+const SYNC_DOT: Record<string, string> = {
+  zebra: "bg-collection-zebra",
+  mini: "bg-collection-mini",
+  "le-cirque": "bg-collection-cirque",
+  mahjong: "bg-collection-mahjong",
+  orchid: "bg-collection-orchid",
+};
 
 export const meQueryKey = ["me"];
 
@@ -38,12 +54,25 @@ export function AppShell({
   const queryClient = useQueryClient();
   const router = useRouter();
   const runSync = useServerFn(syncNow);
+  const fetchSyncCollections = useServerFn(listSyncCollections);
+  const { data: syncCollections = [] } = useQuery({
+    queryKey: ["sync-collections"],
+    queryFn: () => fetchSyncCollections(),
+    staleTime: 60_000,
+  });
 
   const sync = useMutation({
-    mutationFn: () => runSync(),
+    mutationFn: (collection: string | undefined) =>
+      runSync({ data: collection ? { collection } : undefined }),
     onSuccess: (result) => {
+      const scope =
+        result.collections.length === 1 ? ` from ${result.collections[0]}` : "";
       if (result.ok) {
-        toast.success(`Synced ${result.counts.wares} wares`);
+        toast.success(`Synced ${result.counts.wares} wares${scope}`, {
+          description: result.missingTabs.length
+            ? `Skipped — sheet tab not found: ${result.missingTabs.join("; ")}`
+            : undefined,
+        });
       } else {
         toast.error(result.message ?? "Sync failed");
       }
@@ -109,15 +138,42 @@ export function AppShell({
                 )}
               </div>
             </div>
-            <Button
-              size="sm"
-              onClick={() => sync.mutate()}
-              disabled={sync.isPending}
-              className="gap-2"
-            >
-              <RefreshCw className={`size-4 ${sync.isPending ? "animate-spin" : ""}`} />
-              <span className="hidden sm:inline">{sync.isPending ? "Syncing" : "Sync now"}</span>
-            </Button>
+            <div className="flex items-center">
+              <Button
+                size="sm"
+                onClick={() => sync.mutate(undefined)}
+                disabled={sync.isPending}
+                className="gap-2 rounded-r-none"
+              >
+                <RefreshCw className={`size-4 ${sync.isPending ? "animate-spin" : ""}`} />
+                <span className="hidden sm:inline">{sync.isPending ? "Syncing" : "Sync now"}</span>
+              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    size="sm"
+                    disabled={sync.isPending}
+                    className="rounded-l-none border-l border-primary-foreground/25 px-2"
+                    aria-label="Choose a collection to sync"
+                  >
+                    <ChevronDown className="size-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuLabel>Sync from Google Sheet</DropdownMenuLabel>
+                  <DropdownMenuItem onSelect={() => sync.mutate(undefined)}>
+                    All collections
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  {syncCollections.map((c) => (
+                    <DropdownMenuItem key={c.slug} onSelect={() => sync.mutate(c.slug)} className="gap-2">
+                      <span className={`size-2.5 rounded-full ${SYNC_DOT[c.slug] ?? "bg-primary"}`} aria-hidden />
+                      Only {c.name}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
             <div className="flex items-center gap-2">
               <Badge variant="secondary" className="capitalize">
                 {me?.role ?? "…"}
