@@ -282,7 +282,9 @@ export type Database = {
           id: string
           name: string
           phone: string | null
+          remarks: string | null
           sort_order: number
+          source: string
           type: string
           updated_at: string
           updated_by: string | null
@@ -295,7 +297,9 @@ export type Database = {
           id?: string
           name: string
           phone?: string | null
+          remarks?: string | null
           sort_order?: number
+          source?: string
           type?: string
           updated_at?: string
           updated_by?: string | null
@@ -308,7 +312,9 @@ export type Database = {
           id?: string
           name?: string
           phone?: string | null
+          remarks?: string | null
           sort_order?: number
+          source?: string
           type?: string
           updated_at?: string
           updated_by?: string | null
