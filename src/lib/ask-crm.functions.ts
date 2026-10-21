@@ -26,3 +26,21 @@ export const askCrm = createServerFn({ method: "POST" })
     });
     return { answer };
   });
+
+export const getSetsRecommendation = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const apiKey = process.env["LOVABLE_API_KEY"];
+    if (!apiKey) throw new Error("AI recommendations aren't configured yet.");
+    const { buildCrmSnapshot, answerCrmQuestion, SETS_RECOMMENDATION_PROMPT } = await import(
+      "@/lib/ask-crm.server"
+    );
+    const snapshot = await buildCrmSnapshot(context.supabase);
+    const answer = await answerCrmQuestion({
+      apiKey,
+      snapshot,
+      history: [],
+      question: SETS_RECOMMENDATION_PROMPT,
+    });
+    return { answer, generatedAt: new Date().toISOString() };
+  });
