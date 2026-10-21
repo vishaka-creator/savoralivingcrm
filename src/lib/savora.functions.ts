@@ -722,6 +722,7 @@ const contactSchema = z.object({
   company: nullableText(160),
   phone: nullableText(80),
   email: z.string().trim().email().max(255).nullable().optional().transform((v) => v || null),
+  remarks: nullableText(1000),
 });
 
 export const getContacts = createServerFn({ method: "GET" })
