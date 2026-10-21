@@ -2,10 +2,10 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { CalendarDays, Check, Pencil, Plus, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
-import { AppShell } from "@/components/savora/AppShell";
+import { AppShell, useMe } from "@/components/savora/AppShell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -25,6 +25,8 @@ export const Route = createFileRoute("/_authenticated/calendar")({
     { name: "twitter:card", content: "summary_large_image" },
     { name: "robots", content: "noindex" },
   ] }),
+  validateSearch: (search: Record<string, unknown>): { edit?: string } =>
+    typeof search["edit"] === "string" && search["edit"] ? { edit: search["edit"] } : {},
   component: CalendarPage,
 });
 
@@ -44,6 +46,10 @@ function CalendarPage() {
   const queryClient = useQueryClient();
   const { data, isPending } = useQuery({ queryKey: ["calendar-events"], queryFn: () => fetchEvents() });
   const [draft, setDraft] = useState<Draft | null>(null);
+  const { data: me } = useMe();
+  const canEdit = !!me?.isAdmin;
+  const { edit } = Route.useSearch();
+  const navigate = Route.useNavigate();
   const saveMutation = useMutation({
     mutationFn: (value: Draft) => save({ data: { ...value, start_time: new Date(value.start_time).toISOString(), end_time: value.end_time ? new Date(value.end_time).toISOString() : null, notes: value.notes || null } }),
     onSuccess: () => { toast.success("Event saved"); setDraft(null); queryClient.invalidateQueries({ queryKey: ["calendar-events"] }); queryClient.invalidateQueries({ queryKey: ["crm-overview"] }); },
@@ -55,10 +61,20 @@ function CalendarPage() {
     onError: (error: Error) => toast.error(error.message),
   });
   const events = data?.events ?? [];
+  const toDraft = (event: (typeof events)[number]): Draft => ({ id: event.id, title: event.title, type_tag: event.type_tag as Draft["type_tag"], start_time: toLocalInput(event.start_time), end_time: toLocalInput(event.end_time), is_major: event.is_major, notes: event.notes ?? "", sync_google: event.calendar_source === "google" });
 
-  return <AppShell><div className="flex flex-wrap items-end justify-between gap-4"><div><p className="label-caps">Planning</p><h1 className="mt-1 text-3xl">Calendar</h1><p className="mt-2 text-sm text-muted-foreground">Upcoming events for the Savora team, with major moments kept in view.</p></div><Button onClick={() => setDraft({ ...emptyDraft })}><Plus className="mr-2 size-4" />Add event</Button></div>
-    {isPending ? <Skeleton className="mt-8 h-64" /> : <div className="mt-8 grid gap-3">{events.map((event) => <div key={event.id} className="panel flex flex-wrap items-center gap-4 p-5"><div className="grid size-11 place-items-center rounded-md bg-secondary"><CalendarDays className="size-5 text-primary" /></div><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><h2 className="font-medium">{event.title}</h2>{event.is_major && <Badge>Major</Badge>}<Badge variant="secondary">{event.type_tag.replace("_", " ")}</Badge></div><p className="mt-1 text-sm text-muted-foreground">{new Date(event.start_time).toLocaleString()} {event.notes ? ` · ${event.notes}` : ""}</p></div><div className="flex items-center gap-2 text-xs text-muted-foreground">{event.calendar_source === "google" && <span className="inline-flex items-center gap-1"><Check className="size-3.5" />Google Calendar</span>}<Button variant="ghost" size="icon" aria-label={`Edit ${event.title}`} onClick={() => setDraft({ id: event.id, title: event.title, type_tag: event.type_tag as Draft["type_tag"], start_time: toLocalInput(event.start_time), end_time: toLocalInput(event.end_time), is_major: event.is_major, notes: event.notes ?? "", sync_google: event.calendar_source === "google" })}><Pencil className="size-4" /></Button><Button variant="ghost" size="icon" aria-label={`Delete ${event.title}`} onClick={() => { if (window.confirm(`Delete ${event.title}?`)) deleteMutation.mutate({ id: event.id, google_calendar_event_id: event.google_calendar_event_id }); }}><Trash2 className="size-4 text-destructive" /></Button></div></div>)}{!events.length && <div className="panel p-10 text-center text-sm text-muted-foreground">No events planned yet.</div>}</div>}
-    {draft && <EventEditor draft={draft} onChange={setDraft} onClose={() => setDraft(null)} onSave={() => saveMutation.mutate(draft)} pending={saveMutation.isPending} />}
+  // Opened from the Overview pencil: /calendar?edit=<event id>
+  useEffect(() => {
+    if (!edit || !data || !me) return;
+    const target = data.events.find((event) => event.id === edit);
+    if (target && me.isAdmin) setDraft(toDraft(target));
+    navigate({ search: {}, replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [edit, data, me]);
+
+  return <AppShell><div className="flex flex-wrap items-end justify-between gap-4"><div><p className="label-caps">Planning</p><h1 className="mt-1 text-3xl">Calendar</h1><p className="mt-2 text-sm text-muted-foreground">Upcoming events for the Savora team, with major moments kept in view.</p></div>{canEdit && <Button onClick={() => setDraft({ ...emptyDraft })}><Plus className="mr-2 size-4" />Add event</Button>}</div>
+    {isPending ? <Skeleton className="mt-8 h-64" /> : <div className="mt-8 grid gap-3">{events.map((event) => <div key={event.id} className="panel flex flex-wrap items-center gap-4 p-5"><div className="grid size-11 place-items-center rounded-md bg-secondary"><CalendarDays className="size-5 text-primary" /></div><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><h2 className="font-medium">{event.title}</h2>{event.is_major && <Badge>Major</Badge>}<Badge variant="secondary">{event.type_tag.replace("_", " ")}</Badge></div><p className="mt-1 text-sm text-muted-foreground">{new Date(event.start_time).toLocaleString()} {event.notes ? ` · ${event.notes}` : ""}</p></div><div className="flex items-center gap-2 text-xs text-muted-foreground">{event.calendar_source === "google" && <span className="inline-flex items-center gap-1"><Check className="size-3.5" />Google Calendar</span>}{canEdit && <><Button variant="ghost" size="icon" aria-label={`Edit ${event.title}`} onClick={() => setDraft(toDraft(event))}><Pencil className="size-4" /></Button><Button variant="ghost" size="icon" aria-label={`Delete ${event.title}`} onClick={() => { if (window.confirm(`Delete ${event.title}?`)) deleteMutation.mutate({ id: event.id, google_calendar_event_id: event.google_calendar_event_id }); }}><Trash2 className="size-4 text-destructive" /></Button></>}</div></div>)}{!events.length && <div className="panel p-10 text-center text-sm text-muted-foreground">No events planned yet.</div>}</div>}
+    {draft && canEdit && <EventEditor draft={draft} onChange={setDraft} onClose={() => setDraft(null)} onSave={() => saveMutation.mutate(draft)} pending={saveMutation.isPending} />}
   </AppShell>;
 }
 

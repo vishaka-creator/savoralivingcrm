@@ -5,7 +5,7 @@ import { Pencil, Plus, Search, Trash2, Users } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
-import { AppShell } from "@/components/savora/AppShell";
+import { AppShell, useMe } from "@/components/savora/AppShell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,6 +36,8 @@ function ContactsPage() {
   const save = useServerFn(saveContact);
   const remove = useServerFn(deleteContact);
   const queryClient = useQueryClient();
+  const { data: me } = useMe();
+  const canEdit = !!me?.isAdmin;
   const { data, isPending } = useQuery({ queryKey: ["contacts"], queryFn: () => fetchContacts() });
   const [query, setQuery] = useState("");
   const [draft, setDraft] = useState<ContactDraft | null>(null);
@@ -58,18 +60,18 @@ function ContactsPage() {
     <AppShell>
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div><p className="label-caps">CRM</p><h1 className="mt-1 text-3xl">Contacts</h1><p className="mt-2 text-sm text-muted-foreground">Keep B2B relationships and B2C customers close to the work.</p></div>
-        <Button onClick={() => setDraft({ ...emptyDraft })}><Plus className="mr-2 size-4" />Add contact</Button>
+        {canEdit && <Button onClick={() => setDraft({ ...emptyDraft })}><Plus className="mr-2 size-4" />Add contact</Button>}
       </div>
       <div className="relative mt-6 max-w-sm"><Search className="absolute left-3 top-2.5 size-4 text-muted-foreground" /><Input className="pl-9" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search contacts" /></div>
       {isPending ? <Skeleton className="mt-6 h-64" /> : <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {contacts.map((contact) => <div key={contact.id} className="panel p-5">
           <div className="flex items-start justify-between gap-3"><div className="flex items-center gap-3"><span className="grid size-9 place-items-center rounded-full bg-secondary"><Users className="size-4 text-primary" /></span><div><h2 className="font-medium">{contact.name}</h2><p className="text-sm text-muted-foreground">{contact.company ?? "Independent"}</p></div></div><Badge variant="secondary">{contact.type.toUpperCase()}</Badge></div>
           <div className="mt-5 space-y-1 text-sm text-muted-foreground"><p>{contact.email ?? "No email"}</p><p>{contact.phone ?? "No phone"}</p></div>
-          <div className="mt-5 flex justify-end gap-2"><Button variant="ghost" size="icon" aria-label={`Edit ${contact.name}`} onClick={() => setDraft({ id: contact.id, type: contact.type as "b2b" | "b2c", name: contact.name, company: contact.company ?? "", phone: contact.phone ?? "", email: contact.email ?? "" })}><Pencil className="size-4" /></Button><Button variant="ghost" size="icon" aria-label={`Delete ${contact.name}`} onClick={() => { if (window.confirm(`Delete ${contact.name}?`)) deleteMutation.mutate(contact.id); }}><Trash2 className="size-4 text-destructive" /></Button></div>
+          {canEdit && <div className="mt-5 flex justify-end gap-2"><Button variant="ghost" size="icon" aria-label={`Edit ${contact.name}`} onClick={() => setDraft({ id: contact.id, type: contact.type as "b2b" | "b2c", name: contact.name, company: contact.company ?? "", phone: contact.phone ?? "", email: contact.email ?? "" })}><Pencil className="size-4" /></Button><Button variant="ghost" size="icon" aria-label={`Delete ${contact.name}`} onClick={() => { if (window.confirm(`Delete ${contact.name}?`)) deleteMutation.mutate(contact.id); }}><Trash2 className="size-4 text-destructive" /></Button></div>}
         </div>)}
         {!contacts.length && <div className="panel col-span-full p-10 text-center text-sm text-muted-foreground">No contacts match your search.</div>}
       </div>}
-      {draft && <ContactEditor draft={draft} onChange={setDraft} onClose={() => setDraft(null)} onSave={() => mutation.mutate(draft)} pending={mutation.isPending} />}
+      {draft && canEdit && <ContactEditor draft={draft} onChange={setDraft} onClose={() => setDraft(null)} onSave={() => mutation.mutate(draft)} pending={mutation.isPending} />}
     </AppShell>
   );
 }

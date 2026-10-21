@@ -6,7 +6,7 @@ import { ArrowUp, Sparkles, RotateCcw } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
-import { AppShell } from "@/components/savora/AppShell";
+import { AppShell, useMe } from "@/components/savora/AppShell";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { askCrm } from "@/lib/ask-crm.functions";
@@ -44,6 +44,7 @@ function AskPage() {
   const [draft, setDraft] = useState("");
   const [error, setError] = useState<string | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
+  const { data: me } = useMe();
 
   const mutation = useMutation({
     mutationFn: (vars: { question: string; history: Turn[] }) => ask({ data: vars }),
@@ -68,6 +69,19 @@ function AskPage() {
     setDraft("");
     mutation.mutate({ question, history });
   };
+
+  if (me && !me.isAdmin) {
+    return (
+      <AppShell lastSync={dashboard?.lastSync ?? null}>
+        <div className="panel mx-auto max-w-xl p-8">
+          <h1 className="text-2xl">Ask CRM is for the Savora team</h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Your account is view-only. You can browse the Overview, Collections, Contacts and Calendar.
+          </p>
+        </div>
+      </AppShell>
+    );
+  }
 
   return (
     <AppShell lastSync={dashboard?.lastSync ?? null}>

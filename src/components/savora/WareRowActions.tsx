@@ -27,7 +27,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { deleteWare, updateWare } from "@/lib/savora.functions";
+import { deleteWare, updateWare, updateWareSales } from "@/lib/savora.functions";
 import { supabase } from "@/integrations/supabase/client";
 
 export interface WareRow {
@@ -51,6 +51,9 @@ export interface WareRow {
   salesRemarks?: string | null;
   wareMediaPath?: string | null;
   wareMediaUrl?: string | null;
+  soldSets?: number;
+  soldPcs?: number;
+  piecesPerSet?: number;
 }
 
 const numOrNull = (v: string) => (v.trim() === "" ? null : Number(v));
@@ -59,6 +62,9 @@ export function WareRowActions({ ware }: { ware: WareRow }) {
   const queryClient = useQueryClient();
   const save = useServerFn(updateWare);
   const remove = useServerFn(deleteWare);
+  const saveSales = useServerFn(updateWareSales);
+  const pps = Math.max(1, ware.piecesPerSet ?? 4);
+  const savedPiecesSold = (ware.soldSets ?? 0) * pps + (ware.soldPcs ?? 0);
   const [open, setOpen] = useState(false);
 
   const [form, setForm] = useState({
@@ -79,6 +85,7 @@ export function WareRowActions({ ware }: { ware: WareRow }) {
     influencerRemarks: ware.influencerRemarks ?? "",
     showroomRemarks: ware.showroomRemarks ?? "",
     salesRemarks: ware.salesRemarks ?? "",
+    piecesSold: String(savedPiecesSold),
   });
   const [file, setFile] = useState<File | null>(null);
 
@@ -98,7 +105,11 @@ export function WareRowActions({ ware }: { ware: WareRow }) {
         if (error) throw new Error(error.message);
         mediaPath = path;
       }
-      return save({
+      const piecesSold = Number(form.piecesSold || 0);
+      if (!Number.isFinite(piecesSold) || piecesSold < 0 || !Number.isInteger(piecesSold)) {
+        throw new Error("Pieces sold must be a whole number (0 or more)");
+      }
+      await save({
         data: {
           id: ware.id,
           name: form.name.trim(),
@@ -121,6 +132,10 @@ export function WareRowActions({ ware }: { ware: WareRow }) {
           sales_remarks: form.salesRemarks.trim() || null,
         },
       });
+      // Sales feed the Overview pie; a change also takes the difference out of stock.
+      if (piecesSold !== savedPiecesSold) {
+        await saveSales({ data: { id: ware.id, sold_sets: 0, sold_pcs: piecesSold } });
+      }
     },
     onSuccess: () => {
       toast.success("Ware updated");
@@ -273,7 +288,12 @@ export function WareRowActions({ ware }: { ware: WareRow }) {
               <Label htmlFor="w-show-remarks">Showroom display</Label>
               <Textarea id="w-show-remarks" value={form.showroomRemarks} onChange={(e) => setForm((c) => ({ ...c, showroomRemarks: e.target.value }))} placeholder="Which store / showroom, how many" />
             </div>
-            <div className="space-y-1.5 sm:col-span-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="w-pieces-sold">Pieces sold</Label>
+              <Input id="w-pieces-sold" type="number" inputMode="numeric" min={0} step={1} value={form.piecesSold} onChange={set("piecesSold")} />
+              <p className="text-xs text-muted-foreground">Updates the Sales by collection pie. Selling more takes those pieces out of Stock in hand.</p>
+            </div>
+            <div className="space-y-1.5">
               <Label htmlFor="w-sales-remarks">Sales</Label>
               <Textarea id="w-sales-remarks" value={form.salesRemarks} onChange={(e) => setForm((c) => ({ ...c, salesRemarks: e.target.value }))} placeholder="Who bought, how many, order / invoice notes" />
             </div>

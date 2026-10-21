@@ -14,6 +14,8 @@ export const askCrm = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => askSchema.parse(d))
   .handler(async ({ context, data }) => {
+    const { assertAdmin } = await import("@/lib/savora-admin.server");
+    await assertAdmin(context);
     const apiKey = process.env["LOVABLE_API_KEY"];
     if (!apiKey) throw new Error("Ask CRM isn't configured yet.");
     const { buildCrmSnapshot, answerCrmQuestion } = await import("@/lib/ask-crm.server");

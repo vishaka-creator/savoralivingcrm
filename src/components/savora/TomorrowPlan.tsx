@@ -5,6 +5,7 @@ import { CalendarClock } from "lucide-react";
 import { toast } from "sonner";
 
 import { Input } from "@/components/ui/input";
+import { useMe } from "@/components/savora/AppShell";
 import { parseSetsPlanned } from "@/lib/build-plan";
 import { num } from "@/lib/format";
 import { getBuildPlans, saveBuildPlan } from "@/lib/savora.functions";
@@ -72,6 +73,8 @@ function PlanRow({
 }) {
   const queryClient = useQueryClient();
   const save = useServerFn(saveBuildPlan);
+  const { data: me } = useMe();
+  const canEdit = !!me?.isAdmin;
   const [value, setValue] = useState(String(saved));
   useEffect(() => setValue(String(saved)), [saved]);
 
@@ -97,7 +100,7 @@ function PlanRow({
       return;
     }
     setValue(String(n));
-    if (n !== saved && planDate) mutation.mutate(n);
+    if (n !== saved && planDate && canEdit) mutation.mutate(n);
   };
 
   const current = parseSetsPlanned(value) ?? saved;
@@ -118,6 +121,7 @@ function PlanRow({
         step={1}
         value={value}
         disabled={!planDate || mutation.isPending}
+        readOnly={!canEdit}
         onChange={(e) => setValue(e.target.value)}
         onBlur={commit}
         onKeyDown={(e) => {

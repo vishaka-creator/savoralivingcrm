@@ -77,7 +77,7 @@ function AdminPage() {
         <div className="panel p-8">
           <h1 className="text-2xl">Admin only</h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            Your account is a Viewer. Ask an admin to upgrade you if you need to edit set recipes,
+            Your account is view-only. Ask an admin to upgrade you if you need to edit set recipes,
             thresholds or run a sync.
           </p>
         </div>
@@ -406,7 +406,7 @@ function Users() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="admin">Admin</SelectItem>
-                    <SelectItem value="viewer">Viewer</SelectItem>
+                    <SelectItem value="viewer">View only</SelectItem>
                   </SelectContent>
                 </Select>
               </TableCell>

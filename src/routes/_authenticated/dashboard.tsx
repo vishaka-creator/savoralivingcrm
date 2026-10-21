@@ -7,6 +7,7 @@ import {
   ArrowRight,
   Boxes,
   BarChart3,
+  Pencil,
   Plus,
   PackageCheck,
   TrendingUp,
@@ -158,9 +159,18 @@ function Dashboard() {
           <h2 className="mt-1 text-xl">Major events</h2>
           <div className="mt-4 space-y-3">
             {(overview?.events ?? []).filter((event) => event.is_major).slice(0, 4).map((event) => (
-              <div key={event.id} className="border-l-2 border-primary pl-3">
-                <p className="text-sm font-medium">{event.title}</p>
-                <p className="text-xs text-muted-foreground">{new Date(event.start_time).toLocaleDateString()}</p>
+              <div key={event.id} className="flex items-start justify-between gap-2 border-l-2 border-primary pl-3">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium">{event.title}</p>
+                  <p className="text-xs text-muted-foreground">{new Date(event.start_time).toLocaleDateString()}</p>
+                </div>
+                {canReorder && (
+                  <Button asChild variant="ghost" size="icon" className="size-8 shrink-0">
+                    <Link to="/calendar" search={{ edit: event.id }} aria-label={`Edit ${event.title}`}>
+                      <Pencil className="size-4" />
+                    </Link>
+                  </Button>
+                )}
               </div>
             ))}
             {!overview?.events.some((event) => event.is_major) && (
