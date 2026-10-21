@@ -26,6 +26,8 @@ export async function runSheetSync(opts: {
   actorEmail?: string | null;
   /** Limit the sync to these collection slugs; omit for every collection. */
   collections?: string[] | undefined;
+  /** Read this sheet tab instead of the collection's usual one (single collection only). */
+  tab?: string | undefined;
 }): Promise<SyncResult> {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const syncedAt = new Date().toISOString();
@@ -48,12 +50,18 @@ export async function runSheetSync(opts: {
         costTab: builtIn?.costTab ?? null,
       };
     });
-    const targets = opts.collections?.length
+    let targets = opts.collections?.length
       ? all.filter((c) => opts.collections!.includes(c.slug))
       : all;
     if (!targets.length) throw new Error("That collection doesn't exist in the CRM.");
+    if (opts.tab) {
+      if (targets.length !== 1) throw new Error("Pick one collection to bring a tab into.");
+      // A hand-picked tab is read on its own, without the cost tab fallback.
+      targets = [{ ...targets[0]!, sheetTab: opts.tab, costTab: null }];
+    }
     names = targets.map((c) => c.name);
     if (opts.collections?.length) scopeLabel = names.join(", ");
+    if (opts.tab) scopeLabel = `${scopeLabel} from tab "${opts.tab}"`;
 
     const snapshot = await fetchSnapshot(targets);
     if (snapshot.missingTabs.length === targets.length) {
