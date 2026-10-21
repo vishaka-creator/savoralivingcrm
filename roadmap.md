@@ -20,5 +20,6 @@
 - [x] Sales by collection pie names the top seller; AI recommendation on Sets buildable
 - [x] Editable sets-to-build-tomorrow number per collection
 - [x] Collection colours: Zebra gold, Orchid parakeet, Mahjong baby pink, Le Cirque blue, Mini brown
+- [x] Sync menu: sync all collections or just one (incl. in-app collections like Parakeet)
 - [ ] Include Sales remarks in ware search and add .xlsx / Google Sheets-compatible exports
 - [ ] Verify add/edit/delete persistence after reload and run Google Sheets sync successfully
