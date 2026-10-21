@@ -19,7 +19,7 @@ export async function buildCrmSnapshot(supabase: SupabaseClient<any>) {
     supabase
       .from("skus")
       .select(
-        "id, collection_slug, name, code, product_name, pieces_per_set, influencer_stock, store_stock, cost_price, mrp, influencer_remarks, showroom_remarks, sales_remarks, remarks",
+        "id, collection_slug, name, code, product_name, pieces_per_set, sold_sets, sold_pcs, influencer_stock, store_stock, cost_price, mrp, influencer_remarks, showroom_remarks, sales_remarks, remarks",
       )
       .order("sort_order", { ascending: true, nullsFirst: false }),
     supabase.from("raw_materials").select("sku_id, quantity_on_hand"),
@@ -38,8 +38,11 @@ export async function buildCrmSnapshot(supabase: SupabaseClient<any>) {
       mySkus.map((s) => ({ name: s.name, code: s.code, quantity: stockBySku.get(s.id) ?? 0 })),
       myBoxes.map((b) => ({ product: b.product, code: b.code, quantity_on_hand: Number(b.quantity_on_hand ?? 0) })),
     );
+    const soldOf = (s: (typeof mySkus)[number]) =>
+      Number(s.sold_sets ?? 0) * Math.max(1, Number(s.pieces_per_set ?? 4)) + Number(s.sold_pcs ?? 0);
     return {
       collection: c.name,
+      piecesSold: mySkus.reduce((a, s) => a + soldOf(s), 0),
       setsBuildableFromRecipes: recipes.reduce((a, s) => a + s.buildable, 0),
       setRecipes: recipes.map((r) => ({
         set: r.setName,
@@ -60,6 +63,7 @@ export async function buildCrmSnapshot(supabase: SupabaseClient<any>) {
           stockInHand: stock,
           piecesPerSet: perSet,
           setsCanBeMade: Math.floor(stock / perSet),
+          piecesSold: soldOf(s),
           lowStock: stock < LOW_STOCK_PCS,
           influencerStock: Number(s.influencer_stock ?? 0),
           stockOnSales: Number(s.store_stock ?? 0),
@@ -82,6 +86,7 @@ Rules:
 - Set recipes show complete sets buildable from all components; the smallest component (or boxes) limits the total.
 - A ware is low stock when stock in hand is below ${LOW_STOCK_PCS} pieces.
 - Prices are in Indian Rupees (₹).
+- "piecesSold" is the recorded sales in pieces for each ware; a collection's piecesSold is the sum of its wares.
 - Be concise. Use short bullet lists or a small markdown table when listing several wares. Show totals when asked "how many".
 - Never invent wares, numbers or people.`;
 
@@ -148,3 +153,9 @@ export async function answerCrmQuestion(opts: {
   if (!text.trim()) throw new AskCrmError("Ask CRM didn't return an answer. Try rephrasing your question.");
   return text;
 }
+
+export const SETS_RECOMMENDATION_PROMPT = `Give a short recommendation for the "Sets buildable" panel, using exactly these three bullets with bold labels and no intro or closing line:
+- **Top collection:** the collection with the most pieces sold, its pieces sold and share of all pieces sold.
+- **Top ware:** the single ware with the most pieces sold (use its product name if present, plus the collection) and its pieces sold.
+- **Build next:** one concrete suggestion on which sets to build or restock next, based on the top sellers, sets buildable and the limiting ware or low stock.
+Keep the whole answer under 90 words. If no sales are recorded, say so in the first two bullets.`;
