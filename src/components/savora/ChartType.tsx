@@ -74,13 +74,13 @@ export function SimplePie({
   }
   return (
     <ResponsiveContainer width="100%" height="100%">
-      <PieChart>
+      <PieChart margin={{ top: 16, right: 8, bottom: 4, left: 8 }}>
         <Pie
           data={slices}
           dataKey="value"
           nameKey="name"
-          innerRadius="45%"
-          outerRadius="80%"
+          innerRadius="42%"
+          outerRadius="72%"
           paddingAngle={slices.length > 1 ? 2 : 0}
           stroke="var(--color-card)"
           label={({ percent }) => (percent && percent >= 0.06 ? `${Math.round(percent * 100)}%` : "")}
