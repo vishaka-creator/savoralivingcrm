@@ -993,12 +993,21 @@ export const getCrmOverview = createServerFn({ method: "GET" })
 
 export const syncNow = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        collection: z.enum(["zebra", "mini", "le-cirque", "mahjong", "orchid"]).optional(),
+      })
+      .optional()
+      .parse(d),
+  )
+  .handler(async ({ context, data }) => {
     await assertAdmin(context);
     const { runSheetSync } = await import("./sync.server");
     return runSheetSync({
       actor: context.userId,
       actorEmail: (context.claims as { email?: string } | null)?.email ?? null,
+      collections: data?.collection ? [data.collection] : undefined,
     });
   });
 

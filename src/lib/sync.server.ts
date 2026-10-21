@@ -98,7 +98,7 @@ export async function runSheetSync(opts: {
 
     await supabaseAdmin.from("sync_log").insert({
       source: "sheets",
-      tab_or_endpoint: `${snapshot.tabsRead.length} tabs`,
+      tab_or_endpoint: `${scopeLabel} (${snapshot.tabsRead.length} tabs)`.slice(0, 200),
       synced_at: syncedAt,
       row_count: skuCount,
       status: "ok",
@@ -108,7 +108,7 @@ export async function runSheetSync(opts: {
         actor: opts.actor,
         actor_email: opts.actorEmail ?? null,
         action: "sync.sheets",
-        detail: `Synced ${skuCount} wares from ${snapshot.tabsRead.length} collection tabs`,
+        detail: `Synced ${skuCount} wares from ${scopeLabel}`,
       });
     }
 
@@ -116,13 +116,14 @@ export async function runSheetSync(opts: {
       ok: true,
       syncedAt,
       counts: { wares: skuCount },
+      collections: names,
     };
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown sync error";
     console.error("Sheet sync failed:", message);
     await supabaseAdmin.from("sync_log").insert({
       source: "sheets",
-      tab_or_endpoint: "batchGet",
+      tab_or_endpoint: `batchGet: ${scopeLabel}`.slice(0, 200),
       synced_at: syncedAt,
       row_count: 0,
       status: "error",
@@ -132,6 +133,7 @@ export async function runSheetSync(opts: {
       ok: false,
       syncedAt,
       counts: { wares: 0 },
+      collections: names,
       message,
     };
   }
