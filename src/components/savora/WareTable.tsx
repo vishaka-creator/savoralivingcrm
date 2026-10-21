@@ -230,7 +230,7 @@ export function WareTable({
           Drag a column header onto another to reorder columns (or focus a header and press the
           arrow keys) — the order is remembered on this device.
           {canEdit
-            ? " Rows can be dragged onto each other to reorder wares. "Sets can be made" is stock ÷ pieces per set; editing it updates stock in hand."
+            ? " Rows can be dragged onto each other to reorder wares. Sets can be made is stock ÷ pieces per set; editing it updates stock in hand."
             : ""}
         </p>
         {isCustom && (
