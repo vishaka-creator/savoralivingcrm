@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { ArrowUp, Sparkles, RotateCcw } from "lucide-react";
 import ReactMarkdown from "react-markdown";
@@ -10,6 +10,7 @@ import { AppShell } from "@/components/savora/AppShell";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { askCrm } from "@/lib/ask-crm.functions";
+import { getDashboard } from "@/lib/savora.functions";
 
 export const Route = createFileRoute("/_authenticated/ask")({
   head: () => ({
@@ -37,6 +38,8 @@ const SUGGESTIONS = [
 
 function AskPage() {
   const ask = useServerFn(askCrm);
+  const fetchDashboard = useServerFn(getDashboard);
+  const { data: dashboard } = useQuery({ queryKey: ["dashboard"], queryFn: () => fetchDashboard() });
   const [turns, setTurns] = useState<Turn[]>([]);
   const [draft, setDraft] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -67,7 +70,7 @@ function AskPage() {
   };
 
   return (
-    <AppShell lastSync={null}>
+    <AppShell lastSync={dashboard?.lastSync ?? null}>
       <div className="mx-auto flex max-w-3xl flex-col">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
