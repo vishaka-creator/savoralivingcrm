@@ -48,6 +48,7 @@ export interface WareRow {
   remarks: string | null;
   influencerRemarks?: string | null;
   showroomRemarks?: string | null;
+  salesRemarks?: string | null;
   wareMediaPath?: string | null;
   wareMediaUrl?: string | null;
 }
@@ -77,6 +78,7 @@ export function WareRowActions({ ware }: { ware: WareRow }) {
     remarks: ware.remarks ?? "",
     influencerRemarks: ware.influencerRemarks ?? "",
     showroomRemarks: ware.showroomRemarks ?? "",
+    salesRemarks: ware.salesRemarks ?? "",
   });
   const [file, setFile] = useState<File | null>(null);
 
@@ -116,6 +118,7 @@ export function WareRowActions({ ware }: { ware: WareRow }) {
           remarks: form.remarks.trim() || null,
           influencer_remarks: form.influencerRemarks.trim() || null,
           showroom_remarks: form.showroomRemarks.trim() || null,
+          sales_remarks: form.salesRemarks.trim() || null,
         },
       });
     },
@@ -269,6 +272,10 @@ export function WareRowActions({ ware }: { ware: WareRow }) {
             <div className="space-y-1.5">
               <Label htmlFor="w-show-remarks">Showroom display</Label>
               <Textarea id="w-show-remarks" value={form.showroomRemarks} onChange={(e) => setForm((c) => ({ ...c, showroomRemarks: e.target.value }))} placeholder="Which store / showroom, how many" />
+            </div>
+            <div className="space-y-1.5 sm:col-span-2">
+              <Label htmlFor="w-sales-remarks">Sales</Label>
+              <Textarea id="w-sales-remarks" value={form.salesRemarks} onChange={(e) => setForm((c) => ({ ...c, salesRemarks: e.target.value }))} placeholder="Who bought, how many, order / invoice notes" />
             </div>
             <div className="space-y-1.5 sm:col-span-2">
               <Label htmlFor="w-remarks">Other remarks</Label>
