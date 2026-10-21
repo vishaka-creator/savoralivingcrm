@@ -21,7 +21,7 @@ export async function runSheetSync(opts: {
   actor?: string | null;
   actorEmail?: string | null;
   /** Limit the sync to these collections; omit for all five. */
-  collections?: CollectionSlug[];
+  collections?: CollectionSlug[] | undefined;
 }): Promise<SyncResult> {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const syncedAt = new Date().toISOString();
