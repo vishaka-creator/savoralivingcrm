@@ -26,3 +26,6 @@
 - [x] View-only access for outsiders: new sign-ups can only look; current team stays editors (upgrade in Admin)
 - [x] Sales by collection pie refreshes right after a collection/ware update
 - [x] Pencil button on Major events to edit them
+- [ ] Sync menu: pick any sheet tab by name — bring its wares into a collection, or send a collection's CRM data out to that tab
+- [ ] Contacts: import contacts from the Savora Google account (savora.living@gmail.com)
+- [ ] Contacts: remarks field on each contact (e.g. their post / role), editable and shown beside the contact
