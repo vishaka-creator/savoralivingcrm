@@ -81,7 +81,7 @@ export function SimplePie({
           nameKey="name"
           innerRadius="45%"
           outerRadius="80%"
-          paddingAngle={2}
+          paddingAngle={slices.length > 1 ? 2 : 0}
           stroke="var(--color-card)"
           label={({ percent }) => (percent && percent >= 0.06 ? `${Math.round(percent * 100)}%` : "")}
           labelLine={false}
