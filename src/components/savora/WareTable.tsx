@@ -469,8 +469,9 @@ function Cell({
         <TableCell className="min-w-56 max-w-72 whitespace-normal text-xs text-muted-foreground">
           {ware.influencerRemarks && <p><span className="font-medium text-foreground">Influencers:</span> {ware.influencerRemarks}</p>}
           {ware.showroomRemarks && <p><span className="font-medium text-foreground">Showroom:</span> {ware.showroomRemarks}</p>}
+          {ware.salesRemarks && <p><span className="font-medium text-foreground">Sales:</span> {ware.salesRemarks}</p>}
           {ware.remarks && <p>{ware.remarks}</p>}
-          {!ware.influencerRemarks && !ware.showroomRemarks && !ware.remarks && "—"}
+          {!ware.influencerRemarks && !ware.showroomRemarks && !ware.salesRemarks && !ware.remarks && "—"}
         </TableCell>
       );
     case "stock":

@@ -523,6 +523,7 @@ export const updateWare = createServerFn({ method: "POST" })
         remarks: nullableText(1000),
         influencer_remarks: nullableText(1000),
         showroom_remarks: nullableText(1000),
+        sales_remarks: nullableText(2000),
       })
       .parse(d),
   )
@@ -549,6 +550,7 @@ export const updateWare = createServerFn({ method: "POST" })
         remarks: fields.remarks ?? null,
         influencer_remarks: fields.influencer_remarks ?? null,
         showroom_remarks: fields.showroom_remarks ?? null,
+        sales_remarks: fields.sales_remarks ?? null,
       })
       .eq("id", id);
     if (error) throw new Error(error.message);

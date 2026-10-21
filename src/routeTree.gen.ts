@@ -14,6 +14,7 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
+import { Route as AuthenticatedAskRouteImport } from './routes/_authenticated/ask'
 import { Route as AuthenticatedCalendarRouteImport } from './routes/_authenticated/calendar'
 import { Route as AuthenticatedCollectionsRouteImport } from './routes/_authenticated/collections'
 import { Route as AuthenticatedCrmRouteImport } from './routes/_authenticated/crm'
@@ -44,6 +45,11 @@ const ResetPasswordRoute = ResetPasswordRouteImport.update({
 const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
   id: '/admin',
   path: '/admin',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedAskRoute = AuthenticatedAskRouteImport.update({
+  id: '/ask',
+  path: '/ask',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedCalendarRoute = AuthenticatedCalendarRouteImport.update({
@@ -89,6 +95,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/reset-password': typeof ResetPasswordRoute
   '/admin': typeof AuthenticatedAdminRoute
+  '/ask': typeof AuthenticatedAskRoute
   '/calendar': typeof AuthenticatedCalendarRoute
   '/collections': typeof AuthenticatedCollectionsRouteWithChildren
   '/crm': typeof AuthenticatedCrmRoute
@@ -102,6 +109,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/reset-password': typeof ResetPasswordRoute
   '/admin': typeof AuthenticatedAdminRoute
+  '/ask': typeof AuthenticatedAskRoute
   '/calendar': typeof AuthenticatedCalendarRoute
   '/collections': typeof AuthenticatedCollectionsRouteWithChildren
   '/crm': typeof AuthenticatedCrmRoute
@@ -117,6 +125,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/reset-password': typeof ResetPasswordRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
+  '/_authenticated/ask': typeof AuthenticatedAskRoute
   '/_authenticated/calendar': typeof AuthenticatedCalendarRoute
   '/_authenticated/collections': typeof AuthenticatedCollectionsRouteWithChildren
   '/_authenticated/crm': typeof AuthenticatedCrmRoute
@@ -132,6 +141,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/reset-password'
     | '/admin'
+    | '/ask'
     | '/calendar'
     | '/collections'
     | '/crm'
@@ -145,6 +155,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/reset-password'
     | '/admin'
+    | '/ask'
     | '/calendar'
     | '/collections'
     | '/crm'
@@ -159,6 +170,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/reset-password'
     | '/_authenticated/admin'
+    | '/_authenticated/ask'
     | '/_authenticated/calendar'
     | '/_authenticated/collections'
     | '/_authenticated/crm'
@@ -211,6 +223,13 @@ declare module '@tanstack/react-router' {
       path: '/admin'
       fullPath: '/admin'
       preLoaderRoute: typeof AuthenticatedAdminRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/ask': {
+      id: '/_authenticated/ask'
+      path: '/ask'
+      fullPath: '/ask'
+      preLoaderRoute: typeof AuthenticatedAskRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/calendar': {
@@ -281,6 +300,7 @@ const AuthenticatedCollectionsRouteWithChildren =
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRoute
+  AuthenticatedAskRoute: typeof AuthenticatedAskRoute
   AuthenticatedCalendarRoute: typeof AuthenticatedCalendarRoute
   AuthenticatedCollectionsRoute: typeof AuthenticatedCollectionsRouteWithChildren
   AuthenticatedCrmRoute: typeof AuthenticatedCrmRoute
@@ -290,6 +310,7 @@ interface AuthenticatedRouteRouteChildren {
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminRoute: AuthenticatedAdminRoute,
+  AuthenticatedAskRoute: AuthenticatedAskRoute,
   AuthenticatedCalendarRoute: AuthenticatedCalendarRoute,
   AuthenticatedCollectionsRoute: AuthenticatedCollectionsRouteWithChildren,
   AuthenticatedCrmRoute: AuthenticatedCrmRoute,

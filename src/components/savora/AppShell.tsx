@@ -1,7 +1,7 @@
 import { Link, useRouter } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { RefreshCw, LogOut, LayoutGrid, Boxes, Users, CalendarDays, Shield, Menu } from "lucide-react";
+import { RefreshCw, LogOut, LayoutGrid, Boxes, Users, CalendarDays, Shield, Menu, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import type { ReactNode } from "react";
 
@@ -24,6 +24,7 @@ const navItems = [
   { to: "/collections", label: "Collections", icon: Boxes },
   { to: "/crm", label: "Contacts", icon: Users },
   { to: "/calendar", label: "Calendar", icon: CalendarDays },
+  { to: "/ask", label: "Ask CRM", icon: Sparkles },
 ] as const;
 
 export function AppShell({
