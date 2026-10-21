@@ -145,7 +145,7 @@ const normalise = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
 /* --------------------------------- fetch -------------------------------- */
 
 export interface SheetSnapshot {
-  perCollection: Record<CollectionSlug, { products: ProductRow[] }>;
+  perCollection: Partial<Record<CollectionSlug, { products: ProductRow[] }>>;
   tabsRead: string[];
 }
 
@@ -155,57 +155,21 @@ export function toA1Range(sheetName: string, cellRange: string): string {
   return `'${escaped}'!${cellRange}`;
 }
 
-export async function fetchSnapshot(): Promise<SheetSnapshot> {
+/**
+ * Read the collection tabs. Pass `only` to read a subset of collections
+ * (e.g. just Orchid); omit it to read all five.
+ */
+export async function fetchSnapshot(only?: CollectionSlug[]): Promise<SheetSnapshot> {
   // Only the five collection tabs (ware list + production cost) are synced;
   // ledger, boxes-stock and sales tabs are excluded per spec.
+  const targets = only?.length ? COLLECTIONS.filter((c) => only.includes(c.slug)) : COLLECTIONS;
   const ranges: string[] = [];
-  for (const c of COLLECTIONS) {
+  for (const c of targets) {
     ranges.push(toA1Range(c.sheetTab, "A1:N200"));
     ranges.push(toA1Range(c.costTab, "A1:N200"));
   }
 
   const grids = await batchGet(ranges);
 
-  const perCollection = {} as SheetSnapshot["perCollection"];
-  COLLECTIONS.forEach((c, i) => {
-    const stockRows = parseProducts(grids[i * 2] ?? []);
-    const costRows = parseProducts(grids[i * 2 + 1] ?? []);
-    const costByKey = new Map<string, ProductRow>();
-    for (const r of costRows) {
-      if (r.code) costByKey.set(normalise(r.code), r);
-      costByKey.set(normalise(r.name), r);
-    }
-
-    const merged = new Map<string, ProductRow>();
-    const upsert = (r: ProductRow) => {
-      const key = normalise(r.code || r.name);
-      const prev = merged.get(key);
-      const match = costByKey.get(normalise(r.code || "")) ?? costByKey.get(normalise(r.name));
-      merged.set(key, {
-        name: prev?.name || r.name,
-        code: prev?.code ?? r.code,
-        quantity: prev?.quantity ?? r.quantity ?? match?.quantity ?? null,
-        stock: prev?.stock ?? r.stock ?? match?.stock ?? null,
-        cost: prev?.cost ?? r.cost ?? match?.cost ?? null,
-        weight: prev?.weight ?? r.weight ?? match?.weight ?? null,
-        dimensions: prev?.dimensions ?? r.dimensions ?? match?.dimensions ?? null,
-        dimensionsCatalogue:
-          prev?.dimensionsCatalogue ?? r.dimensionsCatalogue ?? match?.dimensionsCatalogue ?? null,
-        productName: prev?.productName ?? r.productName ?? match?.productName ?? null,
-        image: prev?.image ?? r.image ?? match?.image ?? null,
-        printedImage: prev?.printedImage ?? r.printedImage ?? match?.printedImage ?? null,
-      });
-
-    };
-    stockRows.forEach(upsert);
-    // Cost tabs sometimes hold wares the collection tab omits.
-    costRows.forEach(upsert);
-
-    perCollection[c.slug] = { products: [...merged.values()] };
-  });
-
-  return {
-    perCollection,
-    tabsRead: ranges.map((r) => r.slice(1, r.indexOf("'!", 1))),
-  };
-}
+  const perCollection: SheetSnapshot["perCollection"] = {};
+  targets.forEach((c, i) => {
