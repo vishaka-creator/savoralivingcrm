@@ -16,6 +16,7 @@ import { toast } from "sonner";
 
 import { AppShell, useMe } from "@/components/savora/AppShell";
 import { WareTable } from "@/components/savora/WareTable";
+import { ChartTypeToggle, SimplePie, useChartType } from "@/components/savora/ChartType";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -124,6 +125,8 @@ function Dashboard() {
     reorder.mutate({ slug: active.slug, ids });
   };
 
+  const [quarterChart, setQuarterChart] = useChartType("quarterly-sales");
+
   const delta = data && trend(data.totals.salesThisMonth, data.totals.salesLastMonth);
 
 
@@ -155,10 +158,24 @@ function Dashboard() {
               <p className="label-caps">Quarterly view</p>
               <h2 className="mt-1 text-xl">Sales by collection</h2>
             </div>
-            <BarChart3 className="size-5 text-muted-foreground" />
+            <ChartTypeToggle value={quarterChart} onChange={setQuarterChart} label="Sales by collection" />
           </div>
           {overview?.quarterlySales.length ? (
             <div className="mt-4 h-56">
+              {quarterChart === "pie" ? (
+                <SimplePie
+                  valueLabel="Sales"
+                  formatValue={inr}
+                  data={QUARTER_SERIES.map((c) => ({
+                    name: c.name,
+                    color: c.color,
+                    value: overview.quarterlySales.reduce(
+                      (a, q) => a + Number((q as Record<string, unknown>)[c.key] ?? 0),
+                      0,
+                    ),
+                  }))}
+                />
+              ) : (
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={overview.quarterlySales} margin={{ top: 8, right: 8, left: -18, bottom: 8 }}>
                   <CartesianGrid stroke="var(--color-border)" vertical={false} />
@@ -169,9 +186,11 @@ function Dashboard() {
                   <Bar dataKey="mini" name="Mini" stackId="sales" fill="var(--color-chart-2)" />
                   <Bar dataKey="le-cirque" name="Le Cirque" stackId="sales" fill="var(--color-chart-3)" />
                   <Bar dataKey="mahjong" name="Mahjong" stackId="sales" fill="var(--color-chart-4)" />
-                  <Bar dataKey="orchid" name="Orchid" stackId="sales" fill="var(--color-chart-5)" radius={[3, 3, 0, 0]} />
+                  <Bar dataKey="orchid" name="Orchid" stackId="sales" fill="var(--color-chart-5)" />
+                  <Bar dataKey="unassigned" name="Unassigned" stackId="sales" fill="var(--color-muted-foreground)" radius={[3, 3, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
+              )}
             </div>
           ) : (
             <p className="mt-6 text-sm text-muted-foreground">Quarterly sales will appear after the next sales sync.</p>
@@ -346,6 +365,15 @@ function Dashboard() {
   );
 }
 
+const QUARTER_SERIES = [
+  { key: "zebra", name: "Zebra", color: "var(--color-primary)" },
+  { key: "mini", name: "Mini", color: "var(--color-chart-2)" },
+  { key: "le-cirque", name: "Le Cirque", color: "var(--color-chart-3)" },
+  { key: "mahjong", name: "Mahjong", color: "var(--color-chart-4)" },
+  { key: "orchid", name: "Orchid", color: "var(--color-chart-5)" },
+  { key: "unassigned", name: "Unassigned", color: "var(--color-muted-foreground)" },
+];
+
 function SalesChart({ wares }: { wares: Array<{ ware: string; productName: string | null; soldSets: number; soldPcs: number; piecesPerSet: number }> }) {
   const chartData = wares
     .map((ware) => ({
@@ -356,6 +384,7 @@ function SalesChart({ wares }: { wares: Array<{ ware: string; productName: strin
     }))
     .sort((a, b) => b.sales - a.sales)
     .slice(0, 5);
+  const [chartType, setChartType] = useChartType("product-sales");
 
   return (
     <section className="panel p-5" aria-labelledby="product-sales-heading">
@@ -364,10 +393,13 @@ function SalesChart({ wares }: { wares: Array<{ ware: string; productName: strin
           <p className="label-caps">Top 5 products</p>
           <h2 id="product-sales-heading" className="mt-1 text-xl">Product sales</h2>
         </div>
-        <BarChart3 className="size-5 text-muted-foreground" />
+        <ChartTypeToggle value={chartType} onChange={setChartType} label="Product sales" />
       </div>
       {chartData.some((item) => item.sales > 0) ? (
         <div className="mt-4 h-64 w-full">
+          {chartType === "pie" ? (
+            <SimplePie valueLabel="Pieces sold" data={chartData.map((d) => ({ name: d.name, value: d.sales }))} />
+          ) : (
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={chartData} margin={{ top: 8, right: 8, left: -20, bottom: 8 }}>
               <CartesianGrid stroke="var(--color-border)" vertical={false} />
@@ -377,6 +409,7 @@ function SalesChart({ wares }: { wares: Array<{ ware: string; productName: strin
               <Bar dataKey="sales" name="Pieces sold" fill="var(--color-primary)" radius={[3, 3, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
+          )}
         </div>
       ) : (
         <p className="mt-6 text-sm text-muted-foreground">Sales will appear here as products are recorded.</p>
