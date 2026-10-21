@@ -18,6 +18,7 @@ import { AppShell, useMe } from "@/components/savora/AppShell";
 import { WareTable } from "@/components/savora/WareTable";
 import { ChartTypeToggle, SimplePie, useChartType } from "@/components/savora/ChartType";
 import { CollectionSalesCard, SetsRecommendation } from "@/components/savora/CollectionSales";
+import { TomorrowPlan } from "@/components/savora/TomorrowPlan";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -222,6 +223,7 @@ function Dashboard() {
       </div>
 
       {data && <SetsRecommendation />}
+      {data && <TomorrowPlan cards={cards} />}
 
       <div className="mt-12">
         <h2 className="text-xl">Ware list</h2>

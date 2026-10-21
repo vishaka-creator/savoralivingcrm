@@ -150,6 +150,39 @@ export type Database = {
           },
         ]
       }
+      build_plans: {
+        Row: {
+          collection_slug: string
+          created_at: string
+          id: string
+          plan_date: string
+          sets_planned: number
+          updated_at: string
+          updated_by: string | null
+          updated_by_email: string | null
+        }
+        Insert: {
+          collection_slug: string
+          created_at?: string
+          id?: string
+          plan_date: string
+          sets_planned?: number
+          updated_at?: string
+          updated_by?: string | null
+          updated_by_email?: string | null
+        }
+        Update: {
+          collection_slug?: string
+          created_at?: string
+          id?: string
+          plan_date?: string
+          sets_planned?: number
+          updated_at?: string
+          updated_by?: string | null
+          updated_by_email?: string | null
+        }
+        Relationships: []
+      }
       collection_costing: {
         Row: {
           box_cost: number

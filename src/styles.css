@@ -99,11 +99,13 @@
   --input: oklch(0.885 0.013 240);
   --ring: oklch(0.52 0.14 32);
 
-  --collection-zebra: oklch(0.42 0.03 55);
-  --collection-mini: oklch(0.62 0.11 55);
-  --collection-cirque: oklch(0.52 0.13 20);
-  --collection-mahjong: oklch(0.5 0.07 165);
-  --collection-orchid: oklch(0.58 0.1 340);
+  /* Collection colours chosen by the team: Zebra gold, Mini brown, Le Cirque blue,
+     Mahjong baby pink, Orchid parakeet yellow-green. */
+  --collection-zebra: oklch(0.74 0.14 85);
+  --collection-mini: oklch(0.45 0.07 50);
+  --collection-cirque: oklch(0.55 0.15 250);
+  --collection-mahjong: oklch(0.8 0.09 355);
+  --collection-orchid: oklch(0.8 0.17 120);
 }
 
 .dark {

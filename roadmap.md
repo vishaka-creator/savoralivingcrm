@@ -17,5 +17,8 @@
 - [x] Replace the Actual sales column with editable Sets can be made (from stock); low stock below 5 pcs
 - [x] Add Ask CRM AI assistant page (sets buildable, low stock, remarks questions)
 - [x] Add Bar / Pie switch to the Overview charts (remembered per device)
+- [x] Sales by collection pie names the top seller; AI recommendation on Sets buildable
+- [x] Editable sets-to-build-tomorrow number per collection
+- [x] Collection colours: Zebra gold, Orchid parakeet, Mahjong baby pink, Le Cirque blue, Mini brown
 - [ ] Include Sales remarks in ware search and add .xlsx / Google Sheets-compatible exports
 - [ ] Verify add/edit/delete persistence after reload and run Google Sheets sync successfully
