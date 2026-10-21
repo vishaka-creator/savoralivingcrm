@@ -51,6 +51,8 @@ export function AppShell({
   lastSync?: { synced_at: string; status: string } | null;
 }) {
   const { data: me } = useMe();
+  const canEdit = !!me?.isAdmin;
+  const visibleNav = canEdit ? navItems : navItems.filter((item) => item.to !== "/ask");
   const queryClient = useQueryClient();
   const router = useRouter();
   const runSync = useServerFn(syncNow);
@@ -98,7 +100,7 @@ export function AppShell({
           </Link>
 
           <nav className="hidden items-center gap-1 md:flex">
-            {navItems.map((item) => (
+            {visibleNav.map((item) => (
               <Link
                 key={item.to}
                 to={item.to}
@@ -109,14 +111,16 @@ export function AppShell({
                 {item.label}
               </Link>
             ))}
-            <Link
-              to="/admin"
-              activeProps={{ className: "bg-secondary text-secondary-foreground" }}
-              className="inline-flex items-center gap-2 rounded-md px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-secondary/70 hover:text-foreground"
-            >
-              <Shield className="size-4" />
-              Admin
-            </Link>
+            {canEdit && (
+              <Link
+                to="/admin"
+                activeProps={{ className: "bg-secondary text-secondary-foreground" }}
+                className="inline-flex items-center gap-2 rounded-md px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-secondary/70 hover:text-foreground"
+              >
+                <Shield className="size-4" />
+                Admin
+              </Link>
+            )}
           </nav>
 
           <div className="ml-auto flex items-center gap-2 sm:gap-3">
@@ -125,7 +129,7 @@ export function AppShell({
               <SheetContent side="left" className="w-72">
                 <SheetTitle className="mb-5 font-display text-xl">Savora CRM</SheetTitle>
                 <nav className="grid gap-1">
-                  {[...navItems, { to: "/admin", label: "Admin", icon: Shield }].map((item) => <Link key={item.to} to={item.to} className="flex min-h-11 items-center gap-3 rounded-md px-3 text-sm text-foreground hover:bg-secondary"><item.icon className="size-4" />{item.label}</Link>)}
+                  {[...visibleNav, ...(canEdit ? [{ to: "/admin", label: "Admin", icon: Shield }] : [])].map((item) => <Link key={item.to} to={item.to} className="flex min-h-11 items-center gap-3 rounded-md px-3 text-sm text-foreground hover:bg-secondary"><item.icon className="size-4" />{item.label}</Link>)}
                 </nav>
               </SheetContent>
             </Sheet>
@@ -138,7 +142,7 @@ export function AppShell({
                 )}
               </div>
             </div>
-            <div className="flex items-center">
+            {canEdit && <div className="flex items-center">
               <Button
                 size="sm"
                 onClick={() => sync.mutate(undefined)}
@@ -173,10 +177,10 @@ export function AppShell({
                   ))}
                 </DropdownMenuContent>
               </DropdownMenu>
-            </div>
+            </div>}
             <div className="flex items-center gap-2">
-              <Badge variant="secondary" className="capitalize">
-                {me?.role ?? "…"}
+              <Badge variant={canEdit ? "secondary" : "outline"}>
+                {!me ? "…" : canEdit ? "Admin" : "View only"}
               </Badge>
               <Button variant="ghost" size="icon" onClick={signOut} aria-label="Sign out">
                 <LogOut className="size-4" />

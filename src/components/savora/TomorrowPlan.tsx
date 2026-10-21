@@ -72,6 +72,8 @@ function PlanRow({
 }) {
   const queryClient = useQueryClient();
   const save = useServerFn(saveBuildPlan);
+  const { data: me } = useMe();
+  const canEdit = !!me?.isAdmin;
   const [value, setValue] = useState(String(saved));
   useEffect(() => setValue(String(saved)), [saved]);
 
@@ -97,7 +99,7 @@ function PlanRow({
       return;
     }
     setValue(String(n));
-    if (n !== saved && planDate) mutation.mutate(n);
+    if (n !== saved && planDate && canEdit) mutation.mutate(n);
   };
 
   const current = parseSetsPlanned(value) ?? saved;
@@ -118,6 +120,7 @@ function PlanRow({
         step={1}
         value={value}
         disabled={!planDate || mutation.isPending}
+        readOnly={!canEdit}
         onChange={(e) => setValue(e.target.value)}
         onBlur={commit}
         onKeyDown={(e) => {
