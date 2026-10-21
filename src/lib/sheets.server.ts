@@ -31,21 +31,35 @@ export interface ProductRow {
 }
 
 
-async function batchGet(ranges: string[]): Promise<Row[][]> {
+function gatewayHeaders(): Record<string, string> {
   const lovableKey = process.env["LOVABLE_API_KEY"];
   const connKey = process.env["GOOGLE_SHEETS_API_KEY"];
   if (!lovableKey || !connKey) {
     throw new Error("Google Sheets connection is not configured for this project.");
   }
+  return { Authorization: `Bearer ${lovableKey}`, "X-Connection-Api-Key": connKey };
+}
+
+/** Live list of tab names in the workbook. */
+export async function listSheetTabs(): Promise<string[]> {
+  const res = await fetch(
+    `${GATEWAY}/spreadsheets/${SPREADSHEET_ID}?fields=sheets.properties.title`,
+    { headers: gatewayHeaders() },
+  );
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`Google Sheets request failed [${res.status}]: ${body}`);
+  }
+  const json = (await res.json()) as { sheets?: { properties?: { title?: string } }[] };
+  return (json.sheets ?? []).map((s) => s.properties?.title ?? "").filter(Boolean);
+}
+
+async function batchGet(ranges: string[]): Promise<Row[][]> {
+  if (!ranges.length) return [];
   const qs = ranges.map((r) => `ranges=${encodeURIComponent(r)}`).join("&");
   const res = await fetch(
     `${GATEWAY}/spreadsheets/${SPREADSHEET_ID}/values:batchGet?${qs}&valueRenderOption=UNFORMATTED_VALUE`,
-    {
-      headers: {
-        Authorization: `Bearer ${lovableKey}`,
-        "X-Connection-Api-Key": connKey,
-      },
-    },
+    { headers: gatewayHeaders() },
   );
   if (!res.ok) {
     const body = await res.text();
