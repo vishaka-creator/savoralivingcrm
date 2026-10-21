@@ -5,6 +5,7 @@ import { CalendarClock } from "lucide-react";
 import { toast } from "sonner";
 
 import { Input } from "@/components/ui/input";
+import { useMe } from "@/components/savora/AppShell";
 import { parseSetsPlanned } from "@/lib/build-plan";
 import { num } from "@/lib/format";
 import { getBuildPlans, saveBuildPlan } from "@/lib/savora.functions";
