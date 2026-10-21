@@ -16,12 +16,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { supabase } from "@/integrations/supabase/client";
-import { getMe, syncNow } from "@/lib/savora.functions";
+import { getMe, listSyncCollections, syncNow } from "@/lib/savora.functions";
 import { relativeTime } from "@/lib/format";
-import { COLLECTIONS, type CollectionSlug } from "@/lib/savora-config";
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 
-const SYNC_DOT: Record<CollectionSlug, string> = {
+const SYNC_DOT: Record<string, string> = {
   zebra: "bg-collection-zebra",
   mini: "bg-collection-mini",
   "le-cirque": "bg-collection-cirque",
@@ -55,15 +54,25 @@ export function AppShell({
   const queryClient = useQueryClient();
   const router = useRouter();
   const runSync = useServerFn(syncNow);
+  const fetchSyncCollections = useServerFn(listSyncCollections);
+  const { data: syncCollections = [] } = useQuery({
+    queryKey: ["sync-collections"],
+    queryFn: () => fetchSyncCollections(),
+    staleTime: 60_000,
+  });
 
   const sync = useMutation({
-    mutationFn: (collection: CollectionSlug | undefined) =>
+    mutationFn: (collection: string | undefined) =>
       runSync({ data: collection ? { collection } : undefined }),
     onSuccess: (result) => {
       const scope =
         result.collections.length === 1 ? ` from ${result.collections[0]}` : "";
       if (result.ok) {
-        toast.success(`Synced ${result.counts.wares} wares${scope}`);
+        toast.success(`Synced ${result.counts.wares} wares${scope}`, {
+          description: result.missingTabs.length
+            ? `Skipped — sheet tab not found: ${result.missingTabs.join("; ")}`
+            : undefined,
+        });
       } else {
         toast.error(result.message ?? "Sync failed");
       }
@@ -156,9 +165,9 @@ export function AppShell({
                     All collections
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  {COLLECTIONS.map((c) => (
+                  {syncCollections.map((c) => (
                     <DropdownMenuItem key={c.slug} onSelect={() => sync.mutate(c.slug)} className="gap-2">
-                      <span className={`size-2.5 rounded-full ${SYNC_DOT[c.slug]}`} aria-hidden />
+                      <span className={`size-2.5 rounded-full ${SYNC_DOT[c.slug] ?? "bg-primary"}`} aria-hidden />
                       Only {c.name}
                     </DropdownMenuItem>
                   ))}

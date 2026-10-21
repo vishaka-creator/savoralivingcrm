@@ -996,7 +996,13 @@ export const syncNow = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) =>
     z
       .object({
-        collection: z.enum(["zebra", "mini", "le-cirque", "mahjong", "orchid"]).optional(),
+        collection: z
+          .string()
+          .trim()
+          .min(1)
+          .max(40)
+          .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/)
+          .optional(),
       })
       .optional()
       .parse(d),
@@ -1009,6 +1015,17 @@ export const syncNow = createServerFn({ method: "POST" })
       actorEmail: (context.claims as { email?: string } | null)?.email ?? null,
       collections: data?.collection ? [data.collection] : undefined,
     });
+  });
+
+export const listSyncCollections = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data, error } = await context.supabase
+      .from("collections")
+      .select("slug, name")
+      .order("sort_order");
+    if (error) throw new Error(error.message);
+    return data ?? [];
   });
 
 /* ----------------------------- tomorrow's plan ---------------------------- */
