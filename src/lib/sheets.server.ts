@@ -10,6 +10,7 @@ import {
   HEADER_KEYWORDS,
   SPREADSHEET_ID,
 } from "./savora-config";
+import { columnLetter, tabKey } from "./sheet-tabs";
 
 const GATEWAY = "https://connector-gateway.lovable.dev/google_sheets/v4";
 
@@ -187,7 +188,6 @@ export const DEFAULT_TARGETS: SyncTarget[] = COLLECTIONS.map((c) => ({
   costTab: c.costTab,
 }));
 
-const tabKey = (s: string) => s.trim().toLowerCase().replace(/\s+/g, " ");
 
 /**
  * Read the ware-list tab (and cost tab, when there is one) for each target.
@@ -259,4 +259,61 @@ export async function fetchSnapshot(targets: SyncTarget[] = DEFAULT_TARGETS): Pr
     tabsRead: ranges.map((r) => r.slice(1, r.indexOf("'!", 1))),
     missingTabs,
   };
+}
+
+/* --------------------------------- write -------------------------------- */
+
+/** Range for a URL path: encode the tab name but keep "!" and ":" readable. */
+const pathRange = (range: string) => encodeURIComponent(range).replace(/%3A/gi, ":");
+
+async function sheetsFetch(url: string, init: RequestInit): Promise<unknown> {
+  const res = await fetch(url, {
+    ...init,
+    headers: { ...gatewayHeaders(), "Content-Type": "application/json" },
+  });
+  if (!res.ok) {
+    const body = await res.text();
+    console.error(`Sheets gateway write failed [${res.status}]: ${body}`);
+    throw new Error(`Google Sheets request failed [${res.status}]: ${body}`);
+  }
+  return res.json();
+}
+
+/**
+ * Write rows to a tab, creating the tab when it doesn't exist. An existing tab
+ * is cleared and replaced only when `allowReplace` is set. Values are written
+ * as-is (RAW) so remarks starting with "=" never turn into formulas.
+ */
+export async function writeSheetTab(
+  tab: string,
+  values: (string | number)[][],
+  opts: { allowReplace: boolean },
+): Promise<{ tab: string; created: boolean; rows: number }> {
+  const live = await listSheetTabs();
+  const existing = live.find((t) => tabKey(t) === tabKey(tab));
+  if (existing && !opts.allowReplace) {
+    throw new Error(`The tab "${existing}" already has data. Tick "Replace this tab" to overwrite it.`);
+  }
+  const title = existing ?? tab.trim();
+  const base = `${GATEWAY}/spreadsheets/${SPREADSHEET_ID}`;
+
+  if (existing) {
+    await sheetsFetch(`${base}/values/${pathRange(toA1Range(title, "A:ZZ"))}:clear`, {
+      method: "POST",
+      body: "{}",
+    });
+  } else {
+    await sheetsFetch(`${base}:batchUpdate`, {
+      method: "POST",
+      body: JSON.stringify({ requests: [{ addSheet: { properties: { title } } }] }),
+    });
+  }
+
+  const width = Math.max(1, ...values.map((r) => r.length));
+  const range = toA1Range(title, `A1:${columnLetter(width)}${Math.max(1, values.length)}`);
+  await sheetsFetch(`${base}/values/${pathRange(range)}?valueInputOption=RAW`, {
+    method: "PUT",
+    body: JSON.stringify({ range, majorDimension: "ROWS", values }),
+  });
+  return { tab: title, created: !existing, rows: Math.max(0, values.length - 1) };
 }

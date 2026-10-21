@@ -8,6 +8,7 @@ import {
   previousMonthName,
 } from "@/lib/savora-logic";
 import { assertAdmin, isAdminUser } from "@/lib/savora-admin.server";
+import { buildWareSheetRows, readBlockReason, writeBlockReason } from "@/lib/sheet-tabs";
 
 const slugSchema = z.object({ slug: z.string().min(1).max(40) });
 
@@ -721,6 +722,7 @@ const contactSchema = z.object({
   company: nullableText(160),
   phone: nullableText(80),
   email: z.string().trim().email().max(255).nullable().optional().transform((v) => v || null),
+  remarks: nullableText(1000),
 });
 
 export const getContacts = createServerFn({ method: "GET" })
@@ -1013,17 +1015,24 @@ export const syncNow = createServerFn({ method: "POST" })
           .max(40)
           .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/)
           .optional(),
+        tab: z.string().trim().min(1).max(100).optional(),
       })
+      .refine((v) => !v.tab || !!v.collection, "Pick a collection to bring the tab into.")
       .optional()
       .parse(d),
   )
   .handler(async ({ context, data }) => {
     await assertAdmin(context);
+    if (data?.tab) {
+      const blocked = readBlockReason(data.tab);
+      if (blocked) throw new Error(blocked);
+    }
     const { runSheetSync } = await import("./sync.server");
     return runSheetSync({
       actor: context.userId,
       actorEmail: (context.claims as { email?: string } | null)?.email ?? null,
       collections: data?.collection ? [data.collection] : undefined,
+      tab: data?.tab,
     });
   });
 
@@ -1036,6 +1045,86 @@ export const listSyncCollections = createServerFn({ method: "GET" })
       .order("sort_order");
     if (error) throw new Error(error.message);
     return data ?? [];
+  });
+
+/** Live tab names in the Google Sheet, for the "pick a tab" sync dialog. */
+export const getSheetTabs = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertAdmin(context);
+    const { listSheetTabs } = await import("./sheets.server");
+    const tabs = await listSheetTabs();
+    return tabs.map((name) => ({
+      name,
+      canRead: readBlockReason(name) === null,
+      canWrite: writeBlockReason(name) === null,
+    }));
+  });
+
+/** Write one collection's current CRM wares out to a sheet tab. */
+export const writeCollectionToSheet = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        collection: z.string().trim().min(1).max(40).regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
+        tab: z.string().trim().min(1).max(100),
+        replace: z.boolean().default(false),
+      })
+      .parse(d),
+  )
+  .handler(async ({ context, data }) => {
+    await assertAdmin(context);
+    const blocked = writeBlockReason(data.tab);
+    if (blocked) throw new Error(blocked);
+    const { supabase } = context;
+
+    const { data: col, error: colErr } = await supabase
+      .from("collections")
+      .select("slug, name")
+      .eq("slug", data.collection)
+      .maybeSingle();
+    if (colErr) throw new Error(colErr.message);
+    if (!col) throw new Error("That collection doesn't exist in the CRM.");
+
+    const { data: skus, error: skuErr } = await supabase
+      .from("skus")
+      .select(
+        "id, name, code, product_name, dimensions_catalogue, approx_weight_grams, ordered_quantity, pieces_per_set, influencer_stock, store_stock, cost_price, mrp, influencer_remarks, showroom_remarks, sales_remarks, remarks, image_url, printed_image_url",
+      )
+      .eq("collection_slug", data.collection)
+      .order("sort_order", { ascending: true, nullsFirst: false })
+      .order("name");
+    if (skuErr) throw new Error(skuErr.message);
+    const ids = (skus ?? []).map((s) => s.id);
+    const { data: mats, error: matErr } = ids.length
+      ? await supabase.from("raw_materials").select("sku_id, quantity_on_hand").in("sku_id", ids)
+      : { data: [], error: null };
+    if (matErr) throw new Error(matErr.message);
+    const stockBySku = new Map((mats ?? []).map((m) => [m.sku_id, Number(m.quantity_on_hand ?? 0)]));
+
+    const rows = buildWareSheetRows(
+      (skus ?? []).map((s) => ({
+        ...s,
+        approx_weight_grams: s.approx_weight_grams === null ? null : Number(s.approx_weight_grams),
+        ordered_quantity: s.ordered_quantity === null ? null : Number(s.ordered_quantity),
+        cost_price: s.cost_price === null ? null : Number(s.cost_price),
+        mrp: s.mrp === null ? null : Number(s.mrp),
+        stockInHand: stockBySku.get(s.id) ?? 0,
+      })),
+    );
+
+    const { writeSheetTab } = await import("./sheets.server");
+    const result = await writeSheetTab(data.tab, rows, { allowReplace: data.replace });
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    await supabaseAdmin.from("activity_log").insert({
+      actor: context.userId,
+      actor_email: (context.claims as { email?: string } | null)?.email ?? null,
+      action: "sync.sheets.write",
+      detail: `Sent ${result.rows} ${col.name} wares to sheet tab "${result.tab}"${result.created ? " (new tab)" : ""}`,
+    });
+    return { ...result, collection: col.name };
   });
 
 /* ----------------------------- tomorrow's plan ---------------------------- */
