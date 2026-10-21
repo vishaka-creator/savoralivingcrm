@@ -1,16 +1,33 @@
 import { Link, useRouter } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { RefreshCw, LogOut, LayoutGrid, Boxes, Users, CalendarDays, Shield, Menu, Sparkles } from "lucide-react";
+import { RefreshCw, LogOut, LayoutGrid, Boxes, Users, CalendarDays, Shield, Menu, Sparkles, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 import type { ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { supabase } from "@/integrations/supabase/client";
 import { getMe, syncNow } from "@/lib/savora.functions";
 import { relativeTime } from "@/lib/format";
+import { COLLECTIONS, type CollectionSlug } from "@/lib/savora-config";
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+
+const SYNC_DOT: Record<CollectionSlug, string> = {
+  zebra: "bg-collection-zebra",
+  mini: "bg-collection-mini",
+  "le-cirque": "bg-collection-cirque",
+  mahjong: "bg-collection-mahjong",
+  orchid: "bg-collection-orchid",
+};
 
 export const meQueryKey = ["me"];
 
@@ -40,10 +57,13 @@ export function AppShell({
   const runSync = useServerFn(syncNow);
 
   const sync = useMutation({
-    mutationFn: () => runSync(),
+    mutationFn: (collection: CollectionSlug | undefined) =>
+      runSync({ data: collection ? { collection } : undefined }),
     onSuccess: (result) => {
+      const scope =
+        result.collections.length === 1 ? ` from ${result.collections[0]}` : "";
       if (result.ok) {
-        toast.success(`Synced ${result.counts.wares} wares`);
+        toast.success(`Synced ${result.counts.wares} wares${scope}`);
       } else {
         toast.error(result.message ?? "Sync failed");
       }
@@ -109,15 +129,42 @@ export function AppShell({
                 )}
               </div>
             </div>
-            <Button
-              size="sm"
-              onClick={() => sync.mutate()}
-              disabled={sync.isPending}
-              className="gap-2"
-            >
-              <RefreshCw className={`size-4 ${sync.isPending ? "animate-spin" : ""}`} />
-              <span className="hidden sm:inline">{sync.isPending ? "Syncing" : "Sync now"}</span>
-            </Button>
+            <div className="flex items-center">
+              <Button
+                size="sm"
+                onClick={() => sync.mutate(undefined)}
+                disabled={sync.isPending}
+                className="gap-2 rounded-r-none"
+              >
+                <RefreshCw className={`size-4 ${sync.isPending ? "animate-spin" : ""}`} />
+                <span className="hidden sm:inline">{sync.isPending ? "Syncing" : "Sync now"}</span>
+              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    size="sm"
+                    disabled={sync.isPending}
+                    className="rounded-l-none border-l border-primary-foreground/25 px-2"
+                    aria-label="Choose a collection to sync"
+                  >
+                    <ChevronDown className="size-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuLabel>Sync from Google Sheet</DropdownMenuLabel>
+                  <DropdownMenuItem onSelect={() => sync.mutate(undefined)}>
+                    All collections
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  {COLLECTIONS.map((c) => (
+                    <DropdownMenuItem key={c.slug} onSelect={() => sync.mutate(c.slug)} className="gap-2">
+                      <span className={`size-2.5 rounded-full ${SYNC_DOT[c.slug]}`} aria-hidden />
+                      Only {c.name}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
             <div className="flex items-center gap-2">
               <Badge variant="secondary" className="capitalize">
                 {me?.role ?? "…"}
