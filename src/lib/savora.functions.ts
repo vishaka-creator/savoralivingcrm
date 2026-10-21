@@ -1041,7 +1041,8 @@ export const saveBuildPlan = createServerFn({ method: "POST" })
       { onConflict: "collection_slug,plan_date" },
     );
     if (error) throw new Error(error.message);
-    await context.supabase.from("activity_log").insert({
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    await supabaseAdmin.from("activity_log").insert({
       actor: context.userId,
       actor_email: email,
       action: "plan.sets",
