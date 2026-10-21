@@ -69,6 +69,9 @@ export function SimplePie({
 }) {
   const slices = data.filter((d) => d.value > 0);
   const total = slices.reduce((a, d) => a + d.value, 0);
+  if (!slices.length) {
+    return <p className="pt-6 text-sm text-muted-foreground">Nothing to show yet.</p>;
+  }
   return (
     <ResponsiveContainer width="100%" height="100%">
       <PieChart>

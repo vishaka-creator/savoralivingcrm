@@ -186,7 +186,8 @@ function Dashboard() {
                   <Bar dataKey="mini" name="Mini" stackId="sales" fill="var(--color-chart-2)" />
                   <Bar dataKey="le-cirque" name="Le Cirque" stackId="sales" fill="var(--color-chart-3)" />
                   <Bar dataKey="mahjong" name="Mahjong" stackId="sales" fill="var(--color-chart-4)" />
-                  <Bar dataKey="orchid" name="Orchid" stackId="sales" fill="var(--color-chart-5)" radius={[3, 3, 0, 0]} />
+                  <Bar dataKey="orchid" name="Orchid" stackId="sales" fill="var(--color-chart-5)" />
+                  <Bar dataKey="unassigned" name="Unassigned" stackId="sales" fill="var(--color-muted-foreground)" radius={[3, 3, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
               )}
@@ -370,6 +371,7 @@ const QUARTER_SERIES = [
   { key: "le-cirque", name: "Le Cirque", color: "var(--color-chart-3)" },
   { key: "mahjong", name: "Mahjong", color: "var(--color-chart-4)" },
   { key: "orchid", name: "Orchid", color: "var(--color-chart-5)" },
+  { key: "unassigned", name: "Unassigned", color: "var(--color-muted-foreground)" },
 ];
 
 function SalesChart({ wares }: { wares: Array<{ ware: string; productName: string | null; soldSets: number; soldPcs: number; piecesPerSet: number }> }) {
