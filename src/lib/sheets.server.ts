@@ -169,26 +169,57 @@ export function toA1Range(sheetName: string, cellRange: string): string {
   return `'${escaped}'!${cellRange}`;
 }
 
+export interface SyncTarget {
+  slug: string;
+  name: string;
+  /** Ware-list tab name as stored in the CRM (matched to the live tab ignoring case/spaces). */
+  sheetTab: string;
+  /** Optional production-cost tab used to fill missing ware details. */
+  costTab: string | null;
+}
+
+/** Default targets: the five built-in collections. */
+export const DEFAULT_TARGETS: SyncTarget[] = COLLECTIONS.map((c) => ({
+  slug: c.slug,
+  name: c.name,
+  sheetTab: c.sheetTab,
+  costTab: c.costTab,
+}));
+
+const tabKey = (s: string) => s.trim().toLowerCase().replace(/\s+/g, " ");
+
 /**
- * Read the collection tabs. Pass `only` to read a subset of collections
- * (e.g. just Orchid); omit it to read all five.
+ * Read the ware-list tab (and cost tab, when there is one) for each target.
+ * Tab names are resolved against the live workbook so "Parakeet" finds
+ * "PARAKEET". Targets whose ware-list tab is missing are reported, not read.
  */
-export async function fetchSnapshot(only?: CollectionSlug[]): Promise<SheetSnapshot> {
-  // Only the five collection tabs (ware list + production cost) are synced;
+export async function fetchSnapshot(targets: SyncTarget[] = DEFAULT_TARGETS): Promise<SheetSnapshot> {
+  // Only collection tabs (ware list + production cost) are synced;
   // ledger, boxes-stock and sales tabs are excluded per spec.
-  const targets = only?.length ? COLLECTIONS.filter((c) => only.includes(c.slug)) : COLLECTIONS;
+  const live = await listSheetTabs();
+  const liveByKey = new Map(live.map((t) => [tabKey(t), t]));
+
   const ranges: string[] = [];
-  for (const c of targets) {
-    ranges.push(toA1Range(c.sheetTab, "A1:N200"));
-    ranges.push(toA1Range(c.costTab, "A1:N200"));
+  const plan: { target: SyncTarget; stockIdx: number; costIdx: number | null }[] = [];
+  const missingTabs: string[] = [];
+  for (const t of targets) {
+    const stockTab = liveByKey.get(tabKey(t.sheetTab));
+    if (!stockTab) {
+      missingTabs.push(`${t.name}: "${t.sheetTab}"`);
+      continue;
+    }
+    const stockIdx = ranges.push(toA1Range(stockTab, "A1:N200")) - 1;
+    const costTab = t.costTab ? liveByKey.get(tabKey(t.costTab)) : undefined;
+    const costIdx = costTab ? ranges.push(toA1Range(costTab, "A1:N200")) - 1 : null;
+    plan.push({ target: t, stockIdx, costIdx });
   }
 
   const grids = await batchGet(ranges);
 
   const perCollection: SheetSnapshot["perCollection"] = {};
-  targets.forEach((c, i) => {
-    const stockRows = parseProducts(grids[i * 2] ?? []);
-    const costRows = parseProducts(grids[i * 2 + 1] ?? []);
+  plan.forEach(({ target: c, stockIdx, costIdx }) => {
+    const stockRows = parseProducts(grids[stockIdx] ?? []);
+    const costRows = costIdx === null ? [] : parseProducts(grids[costIdx] ?? []);
     const costByKey = new Map<string, ProductRow>();
     for (const r of costRows) {
       if (r.code) costByKey.set(normalise(r.code), r);
