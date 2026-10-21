@@ -23,3 +23,6 @@
 - [x] Sync menu: sync all collections or just one (incl. in-app collections like Parakeet)
 - [ ] Include Sales remarks in ware search and add .xlsx / Google Sheets-compatible exports
 - [ ] Verify add/edit/delete persistence after reload and run Google Sheets sync successfully
+- [ ] View-only access for outsiders: new sign-ups can only look; current team stays editors (upgrade in Admin)
+- [ ] Sales by collection pie refreshes right after a collection/ware update
+- [ ] Pencil button on Major events to edit them
