@@ -26,7 +26,7 @@ export const Route = createFileRoute("/_authenticated/calendar")({
     { name: "robots", content: "noindex" },
   ] }),
   validateSearch: (search: Record<string, unknown>): { edit?: string } =>
-    typeof search.edit === "string" && search.edit ? { edit: search.edit } : {},
+    typeof search["edit"] === "string" && search["edit"] ? { edit: search["edit"] } : {},
   component: CalendarPage,
 });
 
