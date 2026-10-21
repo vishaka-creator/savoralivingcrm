@@ -1001,3 +1001,51 @@ export const syncNow = createServerFn({ method: "POST" })
       actorEmail: (context.claims as { email?: string } | null)?.email ?? null,
     });
   });
+
+/* ----------------------------- tomorrow's plan ---------------------------- */
+
+export const getBuildPlans = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { tomorrowInIndia } = await import("@/lib/build-plan");
+    const planDate = tomorrowInIndia();
+    const { data, error } = await context.supabase
+      .from("build_plans")
+      .select("collection_slug, sets_planned, updated_by_email, updated_at")
+      .eq("plan_date", planDate);
+    if (error) throw new Error(error.message);
+    return { planDate, plans: data ?? [] };
+  });
+
+export const saveBuildPlan = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) =>
+    z
+      .object({
+        collection_slug: z.string().min(1).max(40),
+        plan_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+        sets_planned: z.number().int().min(0).max(100000),
+      })
+      .parse(d),
+  )
+  .handler(async ({ context, data }) => {
+    const email = (context.claims?.email as string | undefined) ?? null;
+    const { error } = await context.supabase.from("build_plans").upsert(
+      {
+        collection_slug: data.collection_slug,
+        plan_date: data.plan_date,
+        sets_planned: data.sets_planned,
+        updated_by: context.userId,
+        updated_by_email: email,
+      },
+      { onConflict: "collection_slug,plan_date" },
+    );
+    if (error) throw new Error(error.message);
+    await context.supabase.from("activity_log").insert({
+      actor: context.userId,
+      actor_email: email,
+      action: "plan.sets",
+      detail: `Set ${data.sets_planned} sets to build for ${data.collection_slug} on ${data.plan_date}`,
+    });
+    return { ok: true };
+  });
