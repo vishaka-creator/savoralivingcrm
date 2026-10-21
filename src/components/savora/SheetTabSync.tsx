@@ -73,7 +73,7 @@ export function SheetTabSyncDialog({
       ? "Pick a collection."
       : direction === "in"
         ? readBlockReason(tab) ?? (tab.trim() && tabs.data && !existing ? `There's no tab called "${tab.trim()}" in the sheet.` : null)
-        : writeBlockReason(tab) ?? (existing && !replace ? null : null);
+        : writeBlockReason(tab);
 
   const run = useMutation({
     mutationFn: async () => {

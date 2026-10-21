@@ -1,9 +1,9 @@
 import { Link, useRouter } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { RefreshCw, LogOut, LayoutGrid, Boxes, Users, CalendarDays, Shield, Menu, Sparkles, ChevronDown } from "lucide-react";
+import { RefreshCw, LogOut, LayoutGrid, Boxes, Users, CalendarDays, Shield, Menu, Sparkles, ChevronDown, FileSpreadsheet } from "lucide-react";
 import { toast } from "sonner";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -19,6 +19,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { getMe, listSyncCollections, syncNow } from "@/lib/savora.functions";
 import { relativeTime } from "@/lib/format";
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { SheetTabSyncDialog } from "@/components/savora/SheetTabSync";
 
 const SYNC_DOT: Record<string, string> = {
   zebra: "bg-collection-zebra",
@@ -56,6 +57,7 @@ export function AppShell({
   const queryClient = useQueryClient();
   const router = useRouter();
   const runSync = useServerFn(syncNow);
+  const [tabDialogOpen, setTabDialogOpen] = useState(false);
   const fetchSyncCollections = useServerFn(listSyncCollections);
   const { data: syncCollections = [] } = useQuery({
     queryKey: ["sync-collections"],
@@ -175,8 +177,18 @@ export function AppShell({
                       Only {c.name}
                     </DropdownMenuItem>
                   ))}
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onSelect={() => setTabDialogOpen(true)} className="gap-2">
+                    <FileSpreadsheet className="size-4" />
+                    A specific sheet tab…
+                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
+              <SheetTabSyncDialog
+                open={tabDialogOpen}
+                onOpenChange={setTabDialogOpen}
+                collections={syncCollections}
+              />
             </div>}
             <div className="flex items-center gap-2">
               <Badge variant={canEdit ? "secondary" : "outline"}>
