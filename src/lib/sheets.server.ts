@@ -9,7 +9,6 @@ import {
   COLLECTIONS,
   HEADER_KEYWORDS,
   SPREADSHEET_ID,
-  type CollectionSlug,
 } from "./savora-config";
 
 const GATEWAY = "https://connector-gateway.lovable.dev/google_sheets/v4";
@@ -159,8 +158,10 @@ const normalise = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
 /* --------------------------------- fetch -------------------------------- */
 
 export interface SheetSnapshot {
-  perCollection: Partial<Record<CollectionSlug, { products: ProductRow[] }>>;
+  perCollection: Record<string, { products: ProductRow[] }>;
   tabsRead: string[];
+  /** Collections whose ware-list tab was not found in the workbook. */
+  missingTabs: string[];
 }
 
 /** A1 range with the sheet name safely quoted (escapes embedded quotes). */
@@ -256,5 +257,6 @@ export async function fetchSnapshot(targets: SyncTarget[] = DEFAULT_TARGETS): Pr
   return {
     perCollection,
     tabsRead: ranges.map((r) => r.slice(1, r.indexOf("'!", 1))),
+    missingTabs,
   };
 }
