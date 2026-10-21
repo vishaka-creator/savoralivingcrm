@@ -455,7 +455,7 @@ function Cell({
         </TableCell>
       );
     case "setsBuildable":
-      return <SalesCell ware={ware} canEdit={canEdit} />;
+      return <SetsCell ware={ware} canEdit={canEdit} />;
     case "influencerStock":
       return <TableCell className="num text-right">{num(ware.influencerStock)}</TableCell>;
     case "storeStock":

@@ -43,7 +43,7 @@ export const getDashboard = createServerFn({ method: "GET" })
       supabase
         .from("skus")
         .select(
-          "id, collection_slug, name, code, unit, ordered_quantity, approx_weight_grams, dimensions, dimensions_catalogue, product_name, image_url, printed_image_url, ware_media_path, influencer_remarks, showroom_remarks, sales_remarks, pieces_per_set, influencer_stock, store_stock, cost_price, mrp, remarks",
+          "id, collection_slug, name, code, unit, ordered_quantity, approx_weight_grams, dimensions, dimensions_catalogue, product_name, image_url, printed_image_url, ware_media_path, influencer_remarks, showroom_remarks, sales_remarks, pieces_per_set, sold_sets, sold_pcs, influencer_stock, store_stock, cost_price, mrp, remarks",
         )
         .order("sort_order", { ascending: true, nullsFirst: false })
         .order("name"),
