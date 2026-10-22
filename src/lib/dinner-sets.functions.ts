@@ -30,7 +30,10 @@ async function logActivity(context: Ctx, action: string, detail: string) {
   });
 }
 
-async function loadCollectionWares(context: Ctx, slug: string) {
+type WareRow = { id: string; name: string; productName: string | null; stock: number };
+type SetRow = { id: string; name: string; guests: number; updatedAt: string; updatedBy: string | null; items: { id: string; piece_name: string; sku_id: string | null; qty_per_set: number }[] };
+
+async function loadCollectionWares(context: Ctx, slug: string): Promise<WareRow[]> {
   const { data, error } = await context.supabase
     .from("skus")
     .select("id, name, product_name, raw_materials(quantity_on_hand)")
@@ -47,7 +50,7 @@ async function loadCollectionWares(context: Ctx, slug: string) {
   });
 }
 
-async function loadSets(context: Ctx, slug: string) {
+async function loadSets(context: Ctx, slug: string): Promise<SetRow[]> {
   const { data, error } = await context.supabase
     .from("dinner_sets")
     .select("id, name, guests, sort_order, updated_at, updated_by_email, dinner_set_items(id, piece_name, sku_id, qty_per_set, sort_order)")
