@@ -60,6 +60,12 @@ describe("matchWareForPiece", () => {
   });
 });
 
+describe("matchWareForPiece by product name", () => {
+  it("links a regal platter whose product name says so", () => {
+    expect(matchWareForPiece("Regal platter", [{ id: "rp", name: "Bravura Coupe Plate", productName: "Masai Regal platter", stock: 10 }])).toBe("rp");
+  });
+});
+
 describe("parseQtyPerSet", () => {
   it("accepts whole numbers", () => expect(parseQtyPerSet("6")).toBe(6));
   it("rejects decimals and negatives", () => {

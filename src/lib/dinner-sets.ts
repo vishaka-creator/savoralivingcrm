@@ -70,15 +70,19 @@ const PIECE_PATTERNS: Record<string, RegExp[]> = {
   "serving bowl": [/serving\s*bowl/i, /noodle\s*bowl/i],
 };
 
-/** Best-guess ware for a standard piece name: first matching pattern wins, ties go to the ware with most stock. */
+/** Best-guess ware for a standard piece name (checks ware name, then product name): first matching pattern wins, ties go to the ware with most stock. */
 export function matchWareForPiece(
   pieceName: string,
-  wares: { id: string; name: string; stock: number }[],
+  wares: { id: string; name: string; productName?: string | null; stock: number }[],
 ): string | null {
   const patterns = PIECE_PATTERNS[pieceName.trim().toLowerCase()];
   if (!patterns) return null;
   for (const re of patterns) {
     const hits = wares.filter((w) => re.test(w.name)).sort((a, b) => b.stock - a.stock);
+    if (hits.length) return hits[0]!.id;
+  }
+  for (const re of patterns) {
+    const hits = wares.filter((w) => re.test(w.productName ?? "")).sort((a, b) => b.stock - a.stock);
     if (hits.length) return hits[0]!.id;
   }
   return null;
