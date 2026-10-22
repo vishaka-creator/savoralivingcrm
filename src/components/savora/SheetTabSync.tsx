@@ -170,8 +170,8 @@ export function SheetTabSyncDialog({
             {tabs.isLoading && <p className="text-xs text-muted-foreground">Loading tabs from the sheet…</p>}
             {tabs.error && <p className="text-xs text-destructive">{(tabs.error as Error).message}</p>}
             {pickable.length > 0 && (
-              <div className="flex flex-wrap gap-1.5">
-                {pickable.slice(0, 12).map((t) => (
+              <div className="flex max-h-32 flex-wrap gap-1.5 overflow-y-auto">
+                {pickable.map((t) => (
                   <button
                     key={t.name}
                     type="button"
