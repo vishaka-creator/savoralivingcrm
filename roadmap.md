@@ -29,3 +29,4 @@
 - [x] Sync menu: pick any sheet tab by name — bring its wares into a collection, or send a collection's CRM data out to that tab
 - [ ] Contacts: import contacts from the Savora Google account (savora.living@gmail.com) — blocked: Gmail connection was declined
 - [x] Contacts: remarks field on each contact (e.g. their post / role), editable and shown beside the contact
+- [x] AI recommendation: which collections have low wares, with sets buildable and what to restock first
