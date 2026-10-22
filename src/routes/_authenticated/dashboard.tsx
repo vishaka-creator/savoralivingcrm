@@ -20,6 +20,7 @@ import { WareTable } from "@/components/savora/WareTable";
 import { ChartTypeToggle, SimplePie, useChartType } from "@/components/savora/ChartType";
 import { CollectionSalesCard, SetsRecommendation } from "@/components/savora/CollectionSales";
 import { TomorrowPlan } from "@/components/savora/TomorrowPlan";
+import { DinnerSets } from "@/components/savora/DinnerSets";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -330,6 +331,14 @@ function Dashboard() {
                    {showAll ? "Show only 5 items" : `Show all ${wares.length} items`}
                  </Button>
                )}
+
+               <DinnerSets
+                 slug={active.slug}
+                 collectionName={active.name}
+                 wares={baseWares}
+                 canEdit={canReorder}
+               />
+
 
 
             </div>
