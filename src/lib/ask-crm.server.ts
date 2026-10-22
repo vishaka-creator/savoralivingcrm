@@ -114,6 +114,8 @@ export async function answerCrmQuestion(opts: {
   snapshot: unknown;
   history: AskTurn[];
   question: string;
+  /** Overrides the default Ask CRM system instructions (e.g. for structured helpers). */
+  instructions?: string;
 }) {
   const runIdFetch = createLovableAiGatewayRunIdFetch();
   const provider = createOpenAI({
@@ -132,7 +134,7 @@ export async function answerCrmQuestion(opts: {
   let streamError: unknown;
   const result = streamText({
     model: provider.responses(MODEL),
-    instructions: INSTRUCTIONS,
+    instructions: opts.instructions ?? INSTRUCTIONS,
     messages,
     onError: ({ error }) => {
       streamError = error;
