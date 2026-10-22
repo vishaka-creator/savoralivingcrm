@@ -43,6 +43,27 @@
       "when": 1792600745189,
       "tag": "0005_contact_remarks",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1792651998324,
+      "tag": "0006_create_dinner_sets",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1792652023552,
+      "tag": "0007_fix_dinner_set_square_plate_match",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1792652312151,
+      "tag": "0008_link_dinner_pieces_by_product_name",
+      "breakpoints": true
     }
   ]
 }
