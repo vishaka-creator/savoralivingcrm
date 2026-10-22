@@ -52,6 +52,14 @@ export async function buildCrmSnapshot(supabase: SupabaseClient<any>) {
         boxesAvailable: r.boxQty,
         components: r.components.map((x) => ({ ware: x.component, perSet: x.perSet, inStock: x.onHand, setsPossible: x.possible })),
       })),
+      lowStockWares: mySkus
+        .map((s) => {
+          const stock = stockBySku.get(s.id) ?? 0;
+          const perSet = Math.max(1, Number(s.pieces_per_set ?? 4));
+          return { ware: s.name, productName: s.product_name, stockInHand: stock, setsCanBeMade: Math.floor(stock / perSet) };
+        })
+        .filter((w) => w.stockInHand < LOW_STOCK_PCS)
+        .sort((a, b) => a.stockInHand - b.stockInHand),
       boxes: myBoxes.map((b) => ({ box: b.product, code: b.code, qty: Number(b.quantity_on_hand ?? 0) })),
       wares: mySkus.map((s) => {
         const stock = stockBySku.get(s.id) ?? 0;
@@ -159,3 +167,9 @@ export const SETS_RECOMMENDATION_PROMPT = `Give a short recommendation for the "
 - **Top ware:** the single ware with the most pieces sold (use its product name if present, plus the collection) and its pieces sold.
 - **Build next:** one concrete suggestion on which sets to build or restock next, based on the top sellers, sets buildable and the limiting ware or low stock.
 Keep the whole answer under 90 words. If no sales are recorded, say so in the first two bullets.`;
+
+export const LOW_STOCK_RECOMMENDATION_PROMPT = `Give a short low-stock recommendation for the "Sets buildable" panel. Use each collection's lowStockWares (wares below ${LOW_STOCK_PCS} pieces), setsBuildableFromRecipes and set recipes. No intro or closing line.
+- One bullet per collection that has low wares, ordered from most to fewest low wares, in this form: **<Collection> — <n> low · <sets buildable> sets buildable:** the (up to 3) lowest wares with pieces left (use product name if present), and which ware limits the sets, if a recipe shows it.
+- Then one bullet **Restock first:** the collection and ware(s) whose restock unlocks the most sets, with a rough number of pieces to add.
+- Finally one bullet **All good:** list the collections with no low wares, or leave this bullet out if every collection has low wares.
+If no ware is low anywhere, say so in one bullet and name the collection with the fewest sets buildable. Keep the whole answer under 140 words.`;

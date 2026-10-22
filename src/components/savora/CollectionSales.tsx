@@ -89,22 +89,37 @@ export function CollectionSalesCard({ cards }: { cards: SalesCard[] }) {
   );
 }
 
-export function SetsRecommendation() {
+const RECOMMENDATION_COPY = {
+  sales: {
+    title: "Sets buildable — what sold more",
+    empty: "Find out which collection and which ware sold the most, and which sets to build next.",
+    loading: "Reading sales and stock…",
+  },
+  "low-stock": {
+    title: "Sets buildable — low stock",
+    empty: "Find out which collections have wares below 5 pcs, how many sets each can still build, and what to restock first.",
+    loading: "Checking stock in every collection…",
+  },
+} as const;
+
+export function SetsRecommendation({ focus = "sales" }: { focus?: "sales" | "low-stock" }) {
   const fetchRecommendation = useServerFn(getSetsRecommendation);
   const [result, setResult] = useState<{ answer: string; generatedAt: string } | null>(null);
+  const copy = RECOMMENDATION_COPY[focus];
+  const headingId = `sets-ai-heading-${focus}`;
   const mutation = useMutation({
-    mutationFn: () => fetchRecommendation(),
+    mutationFn: () => fetchRecommendation({ data: { focus } }),
     onSuccess: setResult,
   });
 
   return (
-    <section className="panel mt-4 p-5" aria-labelledby="sets-ai-heading">
+    <section className="panel p-5" aria-labelledby={headingId}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="label-caps inline-flex items-center gap-1.5">
             <Sparkles className="size-3.5 text-primary" /> AI recommendation
           </p>
-          <h2 id="sets-ai-heading" className="mt-1 text-xl">Sets buildable — what sold more</h2>
+          <h2 id={headingId} className="mt-1 text-xl">{copy.title}</h2>
         </div>
         <Button
           size="sm"
@@ -130,14 +145,10 @@ export function SetsRecommendation() {
           </p>
         </div>
       ) : (
-        !mutation.isPending && (
-          <p className="mt-3 text-sm text-muted-foreground">
-            Find out which collection and which ware sold the most, and which sets to build next.
-          </p>
-        )
+        !mutation.isPending && <p className="mt-3 text-sm text-muted-foreground">{copy.empty}</p>
       )}
       {mutation.isPending && !result && (
-        <p className="mt-3 text-sm text-muted-foreground">Reading sales and stock…</p>
+        <p className="mt-3 text-sm text-muted-foreground">{copy.loading}</p>
       )}
     </section>
   );
