@@ -232,7 +232,12 @@ function Dashboard() {
             )}
       </div>
 
-      {data && <SetsRecommendation />}
+      {data && (
+        <div className="mt-4 grid gap-4 lg:grid-cols-2">
+          <SetsRecommendation focus="sales" />
+          <SetsRecommendation focus="low-stock" />
+        </div>
+      )}
       {data && <TomorrowPlan cards={cards} />}
 
       <div className="mt-12">

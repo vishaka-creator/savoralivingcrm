@@ -31,18 +31,20 @@ export const askCrm = createServerFn({ method: "POST" })
 
 export const getSetsRecommendation = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
+  .inputValidator((d: unknown) =>
+    z.object({ focus: z.enum(["sales", "low-stock"]).default("sales") }).default({ focus: "sales" }).parse(d),
+  )
+  .handler(async ({ context, data }) => {
     const apiKey = process.env["LOVABLE_API_KEY"];
     if (!apiKey) throw new Error("AI recommendations aren't configured yet.");
-    const { buildCrmSnapshot, answerCrmQuestion, SETS_RECOMMENDATION_PROMPT } = await import(
-      "@/lib/ask-crm.server"
-    );
+    const { buildCrmSnapshot, answerCrmQuestion, SETS_RECOMMENDATION_PROMPT, LOW_STOCK_RECOMMENDATION_PROMPT } =
+      await import("@/lib/ask-crm.server");
     const snapshot = await buildCrmSnapshot(context.supabase);
     const answer = await answerCrmQuestion({
       apiKey,
       snapshot,
       history: [],
-      question: SETS_RECOMMENDATION_PROMPT,
+      question: data.focus === "low-stock" ? LOW_STOCK_RECOMMENDATION_PROMPT : SETS_RECOMMENDATION_PROMPT,
     });
     return { answer, generatedAt: new Date().toISOString() };
   });
