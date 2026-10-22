@@ -369,6 +369,95 @@ export type Database = {
         }
         Relationships: []
       }
+      dinner_set_items: {
+        Row: {
+          created_at: string
+          dinner_set_id: string
+          id: string
+          piece_name: string
+          qty_per_set: number
+          sku_id: string | null
+          sort_order: number
+        }
+        Insert: {
+          created_at?: string
+          dinner_set_id: string
+          id?: string
+          piece_name: string
+          qty_per_set?: number
+          sku_id?: string | null
+          sort_order?: number
+        }
+        Update: {
+          created_at?: string
+          dinner_set_id?: string
+          id?: string
+          piece_name?: string
+          qty_per_set?: number
+          sku_id?: string | null
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dinner_set_items_dinner_set_id_fkey"
+            columns: ["dinner_set_id"]
+            isOneToOne: false
+            referencedRelation: "dinner_sets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dinner_set_items_sku_id_fkey"
+            columns: ["sku_id"]
+            isOneToOne: false
+            referencedRelation: "skus"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      dinner_sets: {
+        Row: {
+          collection_slug: string
+          created_at: string
+          guests: number
+          id: string
+          name: string
+          sort_order: number
+          updated_at: string
+          updated_by: string | null
+          updated_by_email: string | null
+        }
+        Insert: {
+          collection_slug: string
+          created_at?: string
+          guests: number
+          id?: string
+          name: string
+          sort_order?: number
+          updated_at?: string
+          updated_by?: string | null
+          updated_by_email?: string | null
+        }
+        Update: {
+          collection_slug?: string
+          created_at?: string
+          guests?: number
+          id?: string
+          name?: string
+          sort_order?: number
+          updated_at?: string
+          updated_by?: string | null
+          updated_by_email?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dinner_sets_collection_slug_fkey"
+            columns: ["collection_slug"]
+            isOneToOne: false
+            referencedRelation: "collections"
+            referencedColumns: ["slug"]
+          },
+        ]
+      }
       expenses: {
         Row: {
           amount: number | null
