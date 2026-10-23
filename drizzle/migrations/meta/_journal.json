@@ -71,6 +71,13 @@
       "when": 1792735062213,
       "tag": "0009_scope_ware_media_reads",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1792735138368,
+      "tag": "0010_scope_reads_to_team_roles",
+      "breakpoints": true
     }
   ]
 }
