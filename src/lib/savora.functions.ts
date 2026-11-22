@@ -203,6 +203,80 @@ export const createCollection = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+export const deleteCollections = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) =>
+    z
+      .object({
+        slugs: z.array(z.string().trim().min(1).max(40)).min(1).max(50),
+      })
+      .parse(d),
+  )
+  .handler(async ({ context, data }) => {
+    await assertAdmin(context);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const slugs = [...new Set(data.slugs)];
+
+    const { data: found, error: findError } = await supabaseAdmin
+      .from("collections")
+      .select("slug, name")
+      .in("slug", slugs);
+    if (findError) throw new Error(findError.message);
+    if (!found?.length) throw new Error("No matching collections found.");
+    const names = found.map((c) => c.name);
+    const existingSlugs = found.map((c) => c.slug);
+
+    const { data: skuRows, error: skuError } = await supabaseAdmin
+      .from("skus")
+      .select("id")
+      .in("collection_slug", existingSlugs);
+    if (skuError) throw new Error(skuError.message);
+    const skuIds = (skuRows ?? []).map((s) => s.id);
+
+    const { data: dinnerRows, error: dinnerError } = await supabaseAdmin
+      .from("dinner_sets")
+      .select("id")
+      .in("collection_slug", existingSlugs);
+    if (dinnerError) throw new Error(dinnerError.message);
+    const dinnerIds = (dinnerRows ?? []).map((d) => d.id);
+
+    // Delete children first so nothing is left orphaned.
+    if (dinnerIds.length) {
+      const { error } = await supabaseAdmin.from("dinner_set_items").delete().in("dinner_set_id", dinnerIds);
+      if (error) throw new Error(error.message);
+    }
+    if (skuIds.length) {
+      const { error } = await supabaseAdmin.from("raw_materials").delete().in("sku_id", skuIds);
+      if (error) throw new Error(error.message);
+    }
+    for (const table of [
+      "dinner_sets",
+      "skus",
+      "boxes",
+      "bom",
+      "sales",
+      "collection_costing",
+      "special_combinations",
+      "build_plans",
+    ] as const) {
+      const { error } = await supabaseAdmin.from(table).delete().in("collection_slug", existingSlugs);
+      if (error) throw new Error(error.message);
+    }
+    const { error: deleteError } = await supabaseAdmin
+      .from("collections")
+      .delete()
+      .in("slug", existingSlugs);
+    if (deleteError) throw new Error(deleteError.message);
+
+    await supabaseAdmin.from("activity_log").insert({
+      actor: context.userId,
+      actor_email: context.claims?.email ?? null,
+      action: "collection.delete",
+      detail: `Deleted ${names.length} collection${names.length === 1 ? "" : "s"}: ${names.join(", ")}`,
+    });
+    return { ok: true, deleted: names };
+  });
+
 export const getCollectionDetail = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => slugSchema.parse(d))

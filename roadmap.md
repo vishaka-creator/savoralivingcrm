@@ -33,3 +33,4 @@
 - [x] Contacts: remarks field on each contact (e.g. their post / role), editable and shown beside the contact
 - [x] AI recommendation: which collections have low wares, with sets buildable and what to restock first
 - [x] Dinner sets for 4 and 6 below the ware list in every collection: pieces with pcs in stock & enough for, editable per-set numbers and recipes, AI help with Apply
+- [x] Overview collections list: select collections with checkboxes and delete them (with confirmation; removes their wares, stock, recipes, sales and costing)

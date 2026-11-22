@@ -10,6 +10,7 @@ import {
   Pencil,
   Plus,
   PackageCheck,
+  Trash2,
   TrendingUp,
 } from "lucide-react";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
@@ -24,6 +25,7 @@ import { DinnerSets } from "@/components/savora/DinnerSets";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -38,7 +40,7 @@ import {
 } from "@/components/ui/dialog";
 
 
-import { createCollection, getCrmOverview, getDashboard, reorderWares } from "@/lib/savora.functions";
+import { createCollection, deleteCollections, getCrmOverview, getDashboard, reorderWares } from "@/lib/savora.functions";
 import { inr, num, trend } from "@/lib/format";
 
 
@@ -85,8 +87,14 @@ function Dashboard() {
   });
 
   const [selected, setSelected] = useState<string | null>(null);
+  const [checkedSlugs, setCheckedSlugs] = useState<string[]>([]);
   const cards = data?.cards ?? [];
   const active = cards.find((c) => c.slug === selected) ?? cards[0] ?? null;
+
+  const toggleChecked = (slug: string, checked: boolean) =>
+    setCheckedSlugs((current) =>
+      checked ? [...new Set([...current, slug])] : current.filter((s) => s !== slug),
+    );
 
   const { data: me } = useMe();
   const canReorder = !!me?.isAdmin;
@@ -257,17 +265,26 @@ function Dashboard() {
            <nav className="panel h-fit p-2 lg:sticky lg:top-6">
              <div className="flex items-center justify-between border-b border-border px-2 pb-2">
                <span className="label-caps">Collections</span>
-               {canReorder && <AddCollectionButton />}
+                {canReorder && <AddCollectionButton />}
              </div>
               <ul className="space-y-1">
                 {cards.map((c) => {
                   const isActive = c.slug === active.slug;
+                  const isChecked = checkedSlugs.includes(c.slug);
                   return (
-                    <li key={c.slug}>
+                    <li key={c.slug} className="flex items-center gap-1">
+                      {canReorder && (
+                        <Checkbox
+                          checked={isChecked}
+                          onCheckedChange={(value) => toggleChecked(c.slug, value === true)}
+                          aria-label={`Select ${c.name}`}
+                          className="ml-1 shrink-0"
+                        />
+                      )}
                       <button
                         type="button"
                         onClick={() => setSelected(c.slug)}
-                        aria-current={isActive ? "true" : undefined}
+                         aria-current={isActive ? "true" : undefined}
                         className={`flex w-full items-center gap-2.5 rounded-md px-3 py-2.5 text-left text-sm transition-colors ${
                           isActive
                             ? "bg-primary/10 text-primary"
@@ -277,7 +294,7 @@ function Dashboard() {
                         <span
                           className={`size-2 shrink-0 rounded-full ${accent[c.slug] ?? "bg-primary"}`}
                         />
-                        <span className="min-w-0 flex-1 truncate font-medium">{c.name}</span>
+                         <span className="min-w-0 flex-1 truncate font-medium">{c.name}</span>
                         <span className="num shrink-0 text-xs text-muted-foreground">
                           {num(c.skuCount)}
                         </span>
@@ -286,6 +303,16 @@ function Dashboard() {
                   );
                 })}
               </ul>
+              {canReorder && checkedSlugs.length > 0 && (
+                <DeleteCollectionsBar
+                  slugs={checkedSlugs}
+                  names={cards.filter((c) => checkedSlugs.includes(c.slug)).map((c) => c.name)}
+                  onDone={() => {
+                    setCheckedSlugs([]);
+                    if (active && checkedSlugs.includes(active.slug)) setSelected(null);
+                  }}
+                />
+              )}
             </nav>
 
             {/* Right: selected collection detail */}
@@ -391,6 +418,58 @@ function SalesChart({ wares }: { wares: Array<{ ware: string; productName: strin
         <p className="mt-6 text-sm text-muted-foreground">Sales will appear here as products are recorded.</p>
       )}
     </section>
+  );
+}
+
+function DeleteCollectionsBar({
+  slugs,
+  names,
+  onDone,
+}: {
+  slugs: string[];
+  names: string[];
+  onDone: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const queryClient = useQueryClient();
+  const remove = useServerFn(deleteCollections);
+  const mutation = useMutation({
+    mutationFn: () => remove({ data: { slugs } }),
+    onSuccess: (result) => {
+      toast.success(`Deleted ${result.deleted.join(", ")}`);
+      setOpen(false);
+      onDone();
+      queryClient.invalidateQueries();
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+
+  return (
+    <div className="mt-2 border-t border-border px-2 pt-2">
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogTrigger asChild>
+          <Button variant="destructive" size="sm" className="w-full gap-2">
+            <Trash2 className="size-4" />
+            Delete {slugs.length} selected
+          </Button>
+        </DialogTrigger>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete {names.length === 1 ? "this collection" : "these collections"}?</DialogTitle>
+            <DialogDescription>
+              {names.join(", ")} will be removed along with their wares, stock, recipes, sales and
+              costing. This cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setOpen(false)}>Keep collections</Button>
+            <Button variant="destructive" onClick={() => mutation.mutate()} disabled={mutation.isPending}>
+              {mutation.isPending ? "Deleting…" : "Delete permanently"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 }
 
